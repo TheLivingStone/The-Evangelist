@@ -22,3 +22,7 @@ app/android/local.properties
 app/android/key.properties
 app/**/GeneratedPluginRegistrant.*
 **/*.g.dart.bak
+
+# build reports / locks
+app/android/build/
+.claude/scheduled_tasks.lock

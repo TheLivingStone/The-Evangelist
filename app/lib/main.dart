@@ -9,7 +9,15 @@ import 'features/shell/home_shell.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initSupabase();
-  runApp(const ProviderScope(child: EvangelistApp()));
+  runApp(const ProviderScopedApp());
+}
+
+/// The app wrapped in its ProviderScope — used by both main() and tests.
+class ProviderScopedApp extends StatelessWidget {
+  const ProviderScopedApp({super.key});
+  @override
+  Widget build(BuildContext context) =>
+      const ProviderScope(child: EvangelistApp());
 }
 
 class EvangelistApp extends ConsumerWidget {
