@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Evangelist — Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  .phone{
+    --bg:#0A0A0C; --surface:#15151A; --surface2:#1E1E25; --elev:0 1px 2px rgba(0,0,0,.5),0 10px 28px rgba(0,0,0,.35);
+    --text:#FFFFFF; --muted:#8C8C96; --faint:#5E5E68;
+    --line:rgba(255,255,255,.07); --line2:rgba(255,255,255,.12);
+    --accent:#FF6B00; --accent2:#FF8A2B; --accentEdge:#C25200;
+    --green:#34D17E; --greenEdge:#1FA862; --blue:#5B8DEF; --purple:#8B83FF; --pink:#F25C9A;
+    --navbg:rgba(13,13,16,.9);
+  }
+  .phone[data-theme="light"]{
+    --bg:#F6F6F3; --surface:#FFFFFF; --surface2:#F0F0EC; --elev:0 1px 2px rgba(0,0,0,.05),0 6px 18px rgba(0,0,0,.05);
+    --text:#1A1A18; --muted:#6E6E66; --faint:#9C9C92;
+    --line:#ECECE6; --line2:#E0E0D8;
+    --accent:#FF6B00; --accent2:#FF8A2B; --accentEdge:#D45800;
+    --green:#2FB36C; --greenEdge:#1F9558; --blue:#3F73D9; --purple:#7B6FF0; --pink:#E8458B;
+    --navbg:rgba(255,255,255,.9);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    background:radial-gradient(900px 600px at 50% -8%, #241405 0%, transparent 55%), #050505;
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:30px 16px 56px;gap:16px;transition:background .3s;
+  }
+  body.lightpage{background:radial-gradient(900px 600px at 50% -8%, #fff1e3 0%, transparent 55%), #E9E9E4}
+  .intro{max-width:460px;text-align:center}
+  .intro .bm{display:inline-flex;align-items:center;gap:9px;margin-bottom:6px}
+  .intro .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(150deg,#FF8A2B,#E24E00);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(255,90,0,.4)}
+  .intro h1{font-family:'Sora';font-size:22px;font-weight:800;letter-spacing:-.5px;color:#fff}
+  body.lightpage .intro h1{color:#1a1a18}
+  .intro .tag{color:var(--accent2);font-family:'Sora';font-weight:700;font-size:13px;margin-top:2px}
+  .intro p{color:#9a9a92;font-size:12.5px;margin-top:7px;line-height:1.55}
+  body.lightpage .intro p{color:#6e6e66}
+  .tt{display:inline-flex;background:#15151a;border:1px solid #26262c;border-radius:99px;padding:4px;gap:2px;margin-top:12px}
+  body.lightpage .tt{background:#fff;border-color:#e4e4dd}
+  .tt button{border:none;background:none;font-family:'Sora';font-weight:700;font-size:12.5px;color:#85858d;padding:8px 15px;border-radius:99px;cursor:pointer;transition:.2s}
+  .tt button.on{background:linear-gradient(180deg,#FF8A2B,#FF6B00);color:#fff}
+
+  /* phone */
+  .phone{width:392px;max-width:100%;height:830px;background:var(--bg);border:11px solid #060606;border-radius:52px;box-shadow:0 40px 90px rgba(0,0,0,.55),0 0 0 1.5px #222;position:relative;overflow:hidden;display:flex;flex-direction:column;transition:background .3s}
+  .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:120px;height:28px;background:#060606;border-radius:0 0 18px 18px;z-index:50}
+  .statusbar{height:48px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 28px 7px;font-size:13px;font-weight:700;color:var(--text);z-index:20}
+  .screen-wrap{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;position:relative}
+  .screen-wrap::-webkit-scrollbar{display:none}
+  .screen{display:none;padding:4px 18px 30px;animation:rise .3s cubic-bezier(.2,.7,.2,1)}
+  .screen.active{display:block}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  @keyframes pop{0%{transform:scale(.7);opacity:0}60%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+  @keyframes up{from{transform:translateY(100%)}to{transform:translateY(0)}}
+
+  .hdr{display:flex;align-items:center;justify-content:space-between;padding:8px 2px 14px}
+  .hdr .greet{font-size:13px;color:var(--muted);font-weight:500}
+  .hdr .name{font-family:'Sora';font-size:22px;font-weight:800;letter-spacing:-.5px;color:var(--text);margin-top:2px}
+  .hdr .ptitle{font-family:'Sora';font-size:24px;font-weight:800;letter-spacing:-.5px;color:var(--text)}
+  .hdr .acts{display:flex;gap:9px}
+  .ib{width:42px;height:42px;border-radius:13px;background:var(--surface);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative}
+  .ib svg{width:20px;height:20px;stroke:var(--text);fill:none;stroke-width:2}
+  .ib .dot{position:absolute;top:9px;right:10px;width:7px;height:7px;border-radius:50%;background:var(--accent);border:2px solid var(--surface)}
+  .av{width:44px;height:44px;border-radius:50%;background:linear-gradient(145deg,#FF8A2B,#E24E00);display:flex;align-items:center;justify-content:center;font-family:'Sora';font-weight:800;font-size:16px;color:#fff;cursor:pointer;overflow:hidden}
+  .av img{width:100%;height:100%;object-fit:cover}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:17px;margin-bottom:13px;box-shadow:var(--elev);position:relative}
+  .lbl{font-family:'Sora';font-size:11.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--faint);font-weight:700;margin-bottom:13px;display:flex;align-items:center;gap:7px}
+  .lbl .va{margin-left:auto;color:var(--accent);font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:700}
+  .sub{font-size:13.5px;color:var(--muted);font-weight:500}
+
+  /* streak */
+  .streak{background:linear-gradient(140deg,#FF7E18 0%,#FF6B00 50%,#DB4E00 100%);border:none;color:#1c0d00;overflow:hidden;box-shadow:0 16px 40px rgba(255,90,0,.32)}
+  .streak::after{content:"";position:absolute;right:-30px;bottom:-46px;width:150px;height:150px;border:2px solid rgba(255,255,255,.16);border-radius:50%}
+  .streak .k{font-family:'Sora';font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:1px;opacity:.85}
+  .streak .big{font-family:'Sora';font-size:50px;font-weight:800;letter-spacing:-2px;line-height:1;margin-top:4px}
+  .streak .big small{font-size:18px;margin-left:5px;font-weight:800}
+  .streak .ks{font-size:13px;font-weight:700;margin-top:7px;opacity:.82}
+  .streak .fl{position:absolute;right:20px;top:50%;transform:translateY(-50%);width:64px;height:64px;border-radius:18px;background:rgba(28,13,0,.16);display:flex;align-items:center;justify-content:center;font-size:34px}
+
+  .prog-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .prog-top b{font-family:'Sora';font-size:15px;font-weight:700;color:var(--text)}
+  .prog-top .frac{font-family:'Sora';font-weight:800;font-size:14px;color:var(--accent)}
+  .bar{height:12px;background:var(--surface2);border-radius:99px;overflow:hidden;border:1px solid var(--line)}
+  .bar>i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  .stat{background:var(--surface2);border-radius:15px;padding:14px}
+  .stat .k{font-size:12px;color:var(--muted);font-weight:500}
+  .stat .v{font-family:'Sora';font-size:26px;font-weight:800;letter-spacing:-1px;color:var(--text);margin-top:5px;line-height:1}
+  .stat .d{font-size:11px;color:var(--green);font-weight:700;margin-top:4px}
+
+  .row{display:flex;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
+  .row:last-child{border-bottom:none}
+  .row .ic{width:42px;height:42px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Sora';font-weight:800;color:#fff;font-size:15px}
+  .row .t{font-size:14px;font-weight:600;color:var(--text)}
+  .row .s{font-size:12px;color:var(--muted);margin-top:1px}
+  .row .endbtn{margin-left:auto;width:36px;height:36px;border-radius:11px;background:var(--surface2);display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .row .endbtn svg{width:17px;height:17px;stroke:var(--accent);fill:none;stroke-width:2.2}
+
+  .btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;font-family:'Sora';font-weight:800;font-size:15px;border:none;border-radius:15px;padding:15px;cursor:pointer;transition:transform .1s,filter .1s}
+  .btn:active{transform:scale(.98)}
+  .btn svg{width:19px;height:19px;stroke-width:2.4;fill:none}
+  .btn-primary{background:var(--accent);color:#fff}.btn-primary svg{stroke:#fff}
+  .btn-green{background:var(--green);color:#06210f}.btn-green svg{stroke:#06210f}
+  .btn-soft{background:var(--surface2);color:var(--text);border:1px solid var(--line2)}.btn-soft svg{stroke:var(--text)}
+  .btn-ghost{background:transparent;color:var(--accent);border:1.5px solid var(--line2)}.btn-ghost svg{stroke:var(--accent)}
+  .mt{margin-top:8px}
+
+  /* people */
+  .search{position:relative;margin-bottom:14px}
+  .search input{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px 14px 13px 44px;color:var(--text);font-size:14.5px;font-family:inherit}
+  .search input::placeholder{color:var(--faint)}
+  .search svg{position:absolute;left:15px;top:50%;transform:translateY(-50%);width:18px;height:18px;stroke:var(--faint);fill:none;stroke-width:2}
+  .chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:13px;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{white-space:nowrap;font-family:'Sora';font-size:12.5px;font-weight:700;padding:8px 14px;border-radius:99px;background:var(--surface);color:var(--muted);border:1px solid var(--line);cursor:pointer;transition:.16s}
+  .chip.on{background:var(--accent);color:#fff;border-color:transparent}
+  .person{display:flex;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:9px;cursor:pointer;transition:.16s;box-shadow:var(--elev)}
+  .person:active{transform:scale(.99)}
+  .pic{width:46px;height:46px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Sora';font-weight:800;font-size:16px;color:#fff;overflow:hidden}
+  .pic img{width:100%;height:100%;object-fit:cover}
+  .person .nm{font-family:'Sora';font-size:15px;font-weight:700;color:var(--text)}
+  .person .meta{font-size:12px;color:var(--muted);margin-top:2px}
+  .person .chev{margin-left:auto;color:var(--faint);font-size:18px}
+  .pill{font-family:'Sora';font-size:9.5px;font-weight:800;padding:4px 9px;border-radius:99px;text-transform:uppercase;letter-spacing:.3px;display:inline-block;margin-top:5px}
+  .p-new{background:var(--surface2);color:var(--muted)}.p-active{background:rgba(52,209,126,.16);color:var(--green)}
+  .p-follow{background:rgba(255,107,0,.14);color:var(--accent)}.p-church{background:rgba(139,131,255,.18);color:var(--purple)}
+
+  /* community feed */
+  .seg{display:flex;gap:8px;overflow-x:auto;padding-bottom:13px;scrollbar-width:none;margin-bottom:2px}
+  .seg::-webkit-scrollbar{display:none}
+  .post{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:15px;margin-bottom:12px;box-shadow:var(--elev)}
+  .post .ph{display:flex;gap:11px;align-items:center;margin-bottom:11px}
+  .post .ph .pic{width:42px;height:42px;cursor:pointer}
+  .post .ph .nm{font-family:'Sora';font-size:14px;font-weight:700;color:var(--text);cursor:pointer}
+  .post .ph .mn{font-size:11.5px;color:var(--muted);margin-top:1px}
+  .post .ph .more{margin-left:auto;color:var(--faint);font-size:18px;letter-spacing:1px}
+  .post .body{font-size:14.5px;line-height:1.55;color:var(--text)}
+  .post .photo{margin-top:11px;height:160px;border-radius:13px;background-size:cover;background-position:center;border:1px solid var(--line)}
+  .ev-banner{margin-top:12px;background:var(--surface2);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;align-items:center;gap:11px}
+  .ev-banner .info{flex:1}.ev-banner .it{font-family:'Sora';font-weight:700;font-size:13.5px;color:var(--text)}
+  .ev-banner .is{font-size:11.5px;color:var(--muted);margin-top:1px}
+  .ev-join{background:var(--accent);color:#fff;font-family:'Sora';font-weight:800;font-size:12.5px;border:none;padding:9px 15px;border-radius:11px;cursor:pointer}
+  .react{display:flex;gap:6px;margin-top:13px;border-top:1px solid var(--line);padding-top:12px}
+  .rb{display:inline-flex;align-items:center;gap:5px;font-family:'Sora';font-size:12.5px;font-weight:700;color:var(--muted);background:transparent;border:none;padding:6px 8px;border-radius:10px;cursor:pointer;transition:.12s}
+  .rb:active{transform:scale(.92)}
+  .rb.on{color:var(--accent)}
+  .rb.pray.on{color:var(--purple)}
+  .rb svg{width:16px;height:16px}
+
+  /* compose */
+  .compose textarea{width:100%;min-height:150px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:15px;color:var(--text);font-family:inherit;font-size:15px;line-height:1.5;resize:none}
+  .compose textarea::placeholder{color:var(--faint)}
+  .type-row{display:flex;gap:8px;margin:13px 0;flex-wrap:wrap}
+  .type-row .t{font-family:'Sora';font-weight:700;font-size:12.5px;padding:9px 14px;border-radius:99px;background:var(--surface);border:1px solid var(--line);color:var(--muted);cursor:pointer}
+  .type-row .t.on{background:var(--accent);color:#fff;border-color:transparent}
+
+  /* add person form */
+  .field{margin-bottom:14px}
+  .field label{display:block;font-family:'Sora';font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:7px}
+  .field input,.field select,.field textarea{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:13px 14px;color:var(--text);font-family:inherit;font-size:14.5px}
+  .field input::placeholder,.field textarea::placeholder{color:var(--faint)}
+  .field textarea{min-height:80px;resize:none}
+  .photo-up{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;width:96px;height:96px;border:1.5px dashed var(--line2);border-radius:18px;color:var(--faint);font-size:11px;font-weight:600;cursor:pointer;margin:0 auto 18px}
+  .photo-up svg{width:22px;height:22px;stroke:var(--accent);fill:none;stroke-width:2}
+
+  /* contact / public profile */
+  .back{display:inline-flex;gap:6px;align-items:center;color:var(--accent);font-family:'Sora';font-weight:700;font-size:14px;cursor:pointer;margin:2px 0 10px}
+  .back svg{width:17px;height:17px;stroke:var(--accent);fill:none;stroke-width:2.4}
+  .dhead{display:flex;flex-direction:column;align-items:center;text-align:center;padding:4px 0 12px}
+  .dhead .pic{width:88px;height:88px;border-radius:50%;font-size:32px;margin-bottom:11px;box-shadow:0 12px 28px rgba(0,0,0,.35)}
+  .dhead .nm{font-family:'Sora';font-size:22px;font-weight:800;color:var(--text)}
+  .dhead .meta{font-size:13px;color:var(--accent2);margin-top:4px;font-weight:600}
+  .dhead .sub2{font-size:12.5px;color:var(--muted);margin-top:2px}
+  .qa{display:flex;gap:9px;margin:14px 0}
+  .qa .b{flex:1;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 4px;text-align:center;cursor:pointer;box-shadow:var(--elev)}
+  .qa .b:active{transform:scale(.95)}
+  .qa svg{width:20px;height:20px;stroke:var(--accent);fill:none;stroke-width:2;margin-bottom:5px}
+  .qa span{display:block;font-family:'Sora';font-size:11px;font-weight:700;color:var(--muted)}
+  .tags{display:flex;gap:8px;flex-wrap:wrap}
+  .tagx{font-family:'Sora';font-size:12px;font-weight:700;color:var(--muted);background:var(--surface2);border:1px solid var(--line);padding:7px 13px;border-radius:99px}
+  .tl{display:flex;gap:13px;padding-bottom:15px;position:relative}
+  .tl::before{content:"";position:absolute;left:17px;top:36px;bottom:-2px;width:2px;background:var(--line2)}
+  .tl:last-child::before{display:none}
+  .tldot{width:36px;height:36px;border-radius:11px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Sora';font-size:13px;font-weight:800;background:var(--surface2);border:1px solid var(--line);z-index:2;color:var(--muted)}
+  .tldot.done{background:rgba(52,209,126,.16);border-color:rgba(52,209,126,.4);color:var(--green)}
+  .tldot.next{background:var(--accent);border:none;color:#fff}
+  .tl .t{font-size:14px;font-weight:700;color:var(--text)}.tl .s{font-size:12px;color:var(--muted);margin-top:1px}
+  .three{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--elev);margin-bottom:13px}
+  .three.g4>div{flex:1}
+  .three>div{flex:1;padding:14px 6px;text-align:center;border-right:1px solid var(--line)}
+  .three>div:last-child{border-right:none}
+  .three .v{font-family:'Sora';font-weight:800;font-size:22px;color:var(--text)}
+  .three .k{font-size:10px;color:var(--faint);font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-top:3px}
+
+  /* session live */
+  .live-wrap{text-align:center;padding-top:8px}
+  .live-badge{display:inline-flex;align-items:center;gap:7px;color:var(--green);font-family:'Sora';font-weight:800;font-size:14px;margin-bottom:6px}
+  .live-badge .d{width:9px;height:9px;border-radius:50%;background:var(--green);animation:bl 1.2s infinite}
+  @keyframes bl{50%{opacity:.3}}
+  .timer{font-family:'Sora';font-size:54px;font-weight:800;letter-spacing:-2px;color:var(--text)}
+  .live-sub{color:var(--muted);font-size:14px;margin-top:2px}
+  .live-stats{display:flex;gap:10px;margin:22px 0}
+  .live-stats .s{flex:1;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:15px 6px;text-align:center;cursor:pointer;box-shadow:var(--elev)}
+  .live-stats .s:active{transform:scale(.96)}
+  .live-stats .v{font-family:'Sora';font-weight:800;font-size:26px;color:var(--accent)}
+  .live-stats .k{font-size:10.5px;color:var(--muted);font-weight:700;margin-top:3px}
+  .live-stats .plus{font-size:10px;color:var(--faint);margin-top:3px;font-weight:600}
+  .loc{display:flex;align-items:center;gap:11px;background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:14px;margin-bottom:14px;box-shadow:var(--elev)}
+  .loc .ic{width:40px;height:40px;border-radius:12px;background:rgba(255,107,0,.14);display:flex;align-items:center;justify-content:center;font-size:18px}
+  .loc .t{font-family:'Sora';font-weight:700;font-size:14px;color:var(--text)}
+  .loc .s{font-size:12px;color:var(--green);margin-top:1px;font-weight:600}
+
+  /* session summary */
+  .sum-hero{text-align:center;padding:18px 0 8px}
+  .sum-hero .fl{font-size:60px;animation:pop .5s}
+  .sum-hero h2{font-family:'Sora';font-weight:800;font-size:24px;color:var(--text);margin-top:8px}
+  .sum-hero p{color:var(--muted);font-size:14px;margin-top:5px}
+  .sum-list .r{display:flex;align-items:center;gap:13px;padding:13px 0;border-bottom:1px solid var(--line)}
+  .sum-list .r:last-child{border-bottom:none}
+  .sum-list .ic{width:38px;height:38px;border-radius:11px;background:rgba(255,107,0,.13);display:flex;align-items:center;justify-content:center}
+  .sum-list .ic svg{width:18px;height:18px;stroke:var(--accent);fill:none;stroke-width:2}
+  .sum-list .v{font-family:'Sora';font-weight:800;font-size:17px;color:var(--text);width:54px}
+  .sum-list .k{font-size:13.5px;color:var(--muted)}
+
+  /* map */
+  .map{position:relative;height:420px;border-radius:20px;overflow:hidden;border:1px solid var(--line2);margin-bottom:13px;box-shadow:var(--elev)}
+  .map svg.base{position:absolute;inset:0;width:100%;height:100%}
+  .mpin{position:absolute;transform:translate(-50%,-50%);z-index:5}
+  .mpin .a{width:38px;height:38px;border-radius:50%;border:2.5px solid var(--accent);overflow:hidden;box-shadow:0 6px 16px rgba(255,90,0,.45);background:linear-gradient(145deg,#FF8A2B,#E24E00);display:flex;align-items:center;justify-content:center;font-family:'Sora';font-weight:800;color:#fff;font-size:13px}
+  .mdot{position:absolute;width:12px;height:12px;border-radius:50%;background:var(--accent);transform:translate(-50%,-50%);box-shadow:0 0 0 5px rgba(255,107,0,.2)}
+  .me-dot{position:absolute;width:16px;height:16px;border-radius:50%;background:var(--blue);transform:translate(-50%,-50%);box-shadow:0 0 0 6px rgba(91,141,239,.25);z-index:6}
+  .map-sheet{position:absolute;left:12px;right:12px;bottom:12px;background:var(--navbg);backdrop-filter:blur(16px);border:1px solid var(--line2);border-radius:18px;padding:15px}
+  .map-sheet .h{display:flex;align-items:center;justify-content:space-between}
+  .map-sheet .t{font-family:'Sora';font-weight:800;font-size:16px;color:var(--text)}
+  .map-sheet .s{font-size:12px;color:var(--green);font-weight:600;margin-top:1px}
+  .map-sheet .x{color:var(--faint);font-size:18px;cursor:pointer}
+  .map-sheet .three{margin:13px 0;box-shadow:none}
+
+  /* daily encouragement */
+  .verse-card{background:linear-gradient(140deg,#1d1306,#15151a);border:1px solid rgba(255,140,40,.22);border-radius:20px;padding:20px;position:relative;margin-bottom:14px}
+  .verse-card .q{font-family:'Sora';font-size:44px;color:rgba(255,140,40,.35);line-height:.6}
+  .verse-card .newv{position:absolute;top:16px;right:16px;font-family:'Sora';font-size:10.5px;font-weight:800;color:var(--accent);background:rgba(255,107,0,.13);padding:6px 11px;border-radius:99px;cursor:pointer}
+  .verse-card p{font-size:17px;line-height:1.55;color:var(--text);font-weight:600;margin-top:6px}
+  .verse-card .ref{color:var(--accent2);font-family:'Sora';font-weight:800;font-size:12.5px;margin-top:12px}
+  .mission-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+  .mission-row:last-child{border-bottom:none}
+  .mcheck{width:26px;height:26px;border-radius:50%;border:2px solid var(--line2);flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .mcheck.on{background:var(--green);border-color:var(--green);color:#06210f;font-weight:800}
+  .mission-row .t{font-size:14.5px;font-weight:600;color:var(--text)}
+  .mission-row.done .t{color:var(--muted);text-decoration:line-through}
+
+  /* achievements hex */
+  .ach{display:flex;justify-content:space-between;gap:6px}
+  .hex{flex:1;text-align:center}
+  .hex .badge{width:54px;height:60px;margin:0 auto 7px;background:linear-gradient(150deg,var(--accent2),var(--accent));clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);display:flex;align-items:center;justify-content:center;font-size:23px}
+  .hex.lock .badge{background:var(--surface2);filter:grayscale(1);opacity:.5}
+  .hex .n{font-size:9.5px;font-weight:700;color:var(--muted);line-height:1.2}
+
+  /* twitter-style community */
+  .twtabs{display:flex;border-bottom:1px solid var(--line);margin-bottom:14px;overflow-x:auto;scrollbar-width:none}
+  .twtabs::-webkit-scrollbar{display:none}
+  .twtabs button{flex:0 0 auto;background:none;border:none;font-family:'Sora';font-weight:700;font-size:13.5px;color:var(--muted);padding:11px 14px;cursor:pointer;position:relative;white-space:nowrap}
+  .twtabs button.on{color:var(--text)}
+  .twtabs button.on::after{content:"";position:absolute;left:14px;right:14px;bottom:-1px;height:3px;border-radius:99px;background:var(--accent)}
+  .composebar{display:flex;align-items:center;gap:11px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:10px 12px;margin-bottom:13px;cursor:pointer;box-shadow:var(--elev)}
+  .composebar .ph{flex:1;color:var(--faint);font-size:14px}
+  .composebar .go{width:34px;height:34px;border-radius:11px;background:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .composebar .go svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2.4}
+  .live-strip{background:rgba(52,209,126,.13);border:1px solid rgba(52,209,126,.3);color:var(--green);font-family:'Sora';font-weight:700;font-size:12.5px;border-radius:12px;padding:10px 13px;margin-bottom:12px;text-align:center}
+  .livepin{position:absolute;transform:translate(-50%,-100%);z-index:5;display:flex;flex-direction:column;align-items:center}
+  .livepin .av2{position:relative;width:42px;height:42px;border-radius:50%;border:2.5px solid var(--accent);background:linear-gradient(145deg,#FF8A2B,#E24E00);display:flex;align-items:center;justify-content:center;font-family:'Sora';font-weight:800;color:#fff;font-size:13px;box-shadow:0 6px 16px rgba(255,90,0,.45)}
+  .livepin .av2::before{content:"";position:absolute;inset:-7px;border-radius:50%;border:2px solid var(--accent);animation:mp 2s infinite}
+  .livepin .live-dot{position:absolute;bottom:-1px;right:-1px;width:12px;height:12px;border-radius:50%;background:var(--green);border:2px solid var(--bg)}
+  .livepin .lname{margin-top:6px;font-family:'Sora';font-weight:700;font-size:10px;color:#fff;background:rgba(0,0,0,.6);padding:3px 8px;border-radius:99px;white-space:nowrap}
+  @keyframes mp{0%{transform:scale(.7);opacity:.8}100%{transform:scale(1.6);opacity:0}}
+
+  /* nav with FAB */
+  .nav{display:flex;align-items:flex-end;background:var(--navbg);backdrop-filter:blur(18px);border-top:1px solid var(--line);padding:9px 6px 22px;position:relative}
+  .nav button{flex:1;background:none;border:none;color:var(--faint);display:flex;flex-direction:column;align-items:center;gap:4px;font-family:'Sora';font-size:10px;font-weight:700;cursor:pointer;padding:4px;transition:color .2s}
+  .nav button svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .nav button.on{color:var(--accent)}
+  .fab{flex:0 0 auto !important;margin:0 6px}
+  .fab .circ{width:58px;height:58px;border-radius:20px;background:linear-gradient(150deg,#FF8A2B,#FF6B00);display:flex;align-items:center;justify-content:center;box-shadow:0 10px 26px rgba(255,90,0,.5);margin-top:-26px;transition:transform .12s}
+  .fab:active .circ{transform:scale(.92)}
+  .fab .circ svg{width:28px;height:28px;stroke:#fff;stroke-width:2.6}
+  .fab .lab{color:var(--accent);font-family:'Sora';font-size:10px;font-weight:800;margin-top:4px}
+
+  /* overlays */
+  .scrim{position:absolute;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(3px);z-index:70;display:none;align-items:flex-end}
+  .scrim.show{display:flex;animation:rise .2s}
+  .sheet{width:100%;background:var(--surface);border:1px solid var(--line2);border-top-left-radius:26px;border-top-right-radius:26px;padding:10px 18px calc(22px + env(safe-area-inset-bottom));animation:up .28s cubic-bezier(.2,.8,.2,1)}
+  .grip{width:40px;height:4px;border-radius:99px;background:var(--line2);margin:8px auto 14px}
+  .sheet h3{font-family:'Sora';font-weight:800;font-size:19px;color:var(--text);text-align:center;margin-bottom:3px}
+  .sheet .ssub{text-align:center;color:var(--muted);font-size:13px;margin-bottom:16px}
+  .opt{display:flex;align-items:center;gap:14px;padding:13px;border-radius:16px;background:var(--surface2);border:1px solid var(--line);margin-bottom:10px;cursor:pointer;transition:.12s}
+  .opt:active{transform:scale(.98)}
+  .opt .oic{width:46px;height:46px;border-radius:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+  .opt .oic svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:2.2}
+  .opt .ot{font-family:'Sora';font-weight:700;font-size:15px;color:var(--text)}
+  .opt .os{font-size:12px;color:var(--muted);margin-top:1px}
+  .opt-cancel{text-align:center;font-family:'Sora';font-weight:700;color:var(--muted);padding:14px;cursor:pointer;font-size:14px}
+
+  .celebrate{position:absolute;inset:0;background:var(--navbg);backdrop-filter:blur(8px);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:80;text-align:center;padding:30px}
+  .celebrate.show{display:flex;animation:rise .25s}
+  .celebrate .big{font-size:68px;animation:pop .5s}
+  .celebrate h2{font-family:'Sora';font-weight:800;font-size:24px;color:var(--text);margin-top:10px}
+  .celebrate p{color:var(--muted);font-size:14px;margin-top:6px;line-height:1.5;max-width:250px}
+  .celebrate .tapnote{font-size:11.5px;color:var(--faint);margin-top:20px}
+</style>
+</head>
+<body>
+  <div class="intro">
+    <div class="bm"><span class="logo"><svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M12 2v20M5 9h14M7 5l5-3 5 3" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+    <h1>The&nbsp;Evangelist</h1>
+    <div class="tag">Go. Share. Disciple. Make Disciples.</div>
+    <p>Dark Mission Social — Strava's tracking, Duolingo's habit, Notion's calm, a focused evangelism feed. Tap the orange <b>+</b> to start the mission. Switch themes below.</p>
+    <div class="tt"><button id="tDark" class="on" onclick="setTheme('dark')">🌙 Dark</button><button id="tLight" onclick="setTheme('light')">☀️ Light</button></div>
+  </div>
+
+  <div class="phone" id="phone" data-theme="dark">
+    <div class="notch"></div>
+    <div class="statusbar"><span>9:41</span><span>● ● ● ● &nbsp;􀙇</span></div>
+
+    <div class="screen-wrap" id="scroller">
+
+      <!-- ===== DASHBOARD ===== -->
+      <section class="screen active" id="dashboard">
+        <div class="hdr">
+          <div><div class="greet">Good morning,</div><div class="name">Alex! 🔥</div></div>
+          <div class="acts">
+            <div class="ib" onclick="go('map')"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+            <div class="ib"><span class="dot"></span><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></div>
+          </div>
+        </div>
+        <div class="sub" style="margin:-8px 0 16px 2px">Your mission matters today.</div>
+
+        <div class="card streak">
+          <div class="k">Current Streak</div>
+          <div class="big">12<small>days</small></div>
+          <div class="ks">Keep it burning! 🔥</div>
+          <div class="fl">🔥</div>
+        </div>
+
+        <div class="card">
+          <div class="prog-top"><b>Weekly Mission</b><span class="frac">3 / 5</span></div>
+          <div class="sub" style="font-size:12.5px;margin-bottom:10px">Share the Gospel with 5 people</div>
+          <div class="bar"><i style="width:60%"></i></div>
+        </div>
+
+        <div class="card">
+          <div class="lbl">Impact This Month <span class="va" onclick="go('profile')">View all</span></div>
+          <div class="grid2">
+            <div class="stat"><div class="k">Conversations</div><div class="v">24</div><div class="d">+8 this month</div></div>
+            <div class="stat"><div class="k">Salvations</div><div class="v">6</div><div class="d">+2 this month</div></div>
+            <div class="stat"><div class="k">Follow-Ups</div><div class="v">15</div><div class="d">+6 this month</div></div>
+            <div class="stat"><div class="k">Church Connections</div><div class="v">3</div><div class="d">+1 this month</div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="lbl">Follow-Up Reminders <span class="va" onclick="go('people')">View all</span></div>
+          <div class="row" onclick="go('contact')">
+            <div class="ic" style="background:linear-gradient(145deg,#5B8DEF,#3F73D9)">MJ</div>
+            <div style="flex:1"><div class="t">Marcus Johnson</div><div class="s">Met 3 days ago · Follow up today</div></div>
+            <div class="endbtn"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+          </div>
+        </div>
+
+        <div class="card" onclick="go('encouragement')" style="cursor:pointer;display:flex;align-items:center;gap:13px">
+          <div style="width:44px;height:44px;border-radius:13px;background:rgba(255,107,0,.14);display:flex;align-items:center;justify-content:center;font-size:20px">📖</div>
+          <div style="flex:1"><div style="font-family:'Sora';font-weight:700;font-size:14.5px;color:var(--text)">Daily Encouragement</div><div class="s" style="font-size:12px;color:var(--muted)">A word to keep you faithful today</div></div>
+          <div style="color:var(--faint);font-size:18px">›</div>
+        </div>
+      </section>
+
+      <!-- ===== PEOPLE ===== -->
+      <section class="screen" id="people">
+        <div class="hdr"><div class="back" onclick="go('dashboard')"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>My People</div><div class="ib" onclick="go('addperson')"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div></div>
+        <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><input placeholder="Search people…"></div>
+        <div class="chips"><div class="chip on">All</div><div class="chip">New</div><div class="chip">Follow-Up</div><div class="chip">Church</div><div class="chip">Active</div></div>
+
+        <div class="person" onclick="go('contact')">
+          <div class="pic" style="background:linear-gradient(145deg,#5B8DEF,#3F73D9)">MJ</div>
+          <div><div class="nm">Marcus Johnson</div><div class="meta">Met 3 days ago · Downtown</div><span class="pill p-follow">Follow-Up</span></div>
+          <div class="chev">›</div>
+        </div>
+        <div class="person">
+          <div class="pic" style="background:linear-gradient(145deg,#F25C9A,#D6347C)">SW</div>
+          <div><div class="nm">Sophie Williams</div><div class="meta">Met 1 week ago · Park Street</div><span class="pill p-active">Active</span></div>
+          <div class="chev">›</div>
+        </div>
+        <div class="person">
+          <div class="pic" style="background:linear-gradient(145deg,#34D17E,#1FA862)">DL</div>
+          <div><div class="nm">David Lee</div><div class="meta">Met 1 week ago · Coffee Shop</div><span class="pill p-follow">Follow-Up</span></div>
+          <div class="chev">›</div>
+        </div>
+        <div class="person">
+          <div class="pic" style="background:linear-gradient(145deg,#8B83FF,#6C5CE7)">EB</div>
+          <div><div class="nm">Emma Brown</div><div class="meta">Met 2 weeks ago · Campus</div><span class="pill p-church">Church</span></div>
+          <div class="chev">›</div>
+        </div>
+        <div class="person">
+          <div class="pic" style="background:linear-gradient(145deg,#FFA66E,#E17055)">JC</div>
+          <div><div class="nm">James Carter</div><div class="meta">Met 3 weeks ago · Mall</div><span class="pill p-new">New</span></div>
+          <div class="chev">›</div>
+        </div>
+        <div class="person">
+          <div class="pic" style="background:linear-gradient(145deg,#34D17E,#1FA862)">OM</div>
+          <div><div class="nm">Olivia Martinez</div><div class="meta">Met 3 weeks ago · Outreach</div><span class="pill p-active">Active</span></div>
+          <div class="chev">›</div>
+        </div>
+      </section>
+
+      <!-- ===== ADD PERSON ===== -->
+      <section class="screen" id="addperson">
+        <div class="hdr"><div class="back" onclick="go('people')"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Add Person</div><div style="font-family:'Sora';font-weight:800;color:var(--accent);cursor:pointer" onclick="celebrate('🙌','Person saved!','Marcus is now in your follow-up list. Stay faithful to check in.'); go('people')">Save</div></div>
+        <div class="photo-up"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add Photo</div>
+        <div class="field"><label>First Name</label><input placeholder="Enter first name"></div>
+        <div class="field"><label>Last Name</label><input placeholder="Enter last name"></div>
+        <div class="field"><label>Phone Number</label><input placeholder="(555) 123-4567"></div>
+        <div class="field"><label>Email (optional)</label><input placeholder="Enter email"></div>
+        <div class="field"><label>Where did you meet?</label><input placeholder="Downtown Atlanta"></div>
+        <div class="field"><label>What happened?</label><textarea placeholder="We had a great conversation about faith and life."></textarea></div>
+        <div class="field"><label>Spiritual Status</label><select><option>New Contact</option><option>Accepted Christ</option><option>Follow-Up Started</option><option>Connected to Church</option></select></div>
+        <div class="field"><label>Next Follow-Up</label><input placeholder="May 20, 2024"></div>
+        <div class="field"><label>Notes (optional)</label><textarea placeholder="Add any additional notes…"></textarea></div>
+      </section>
+
+      <!-- ===== COMMUNITY ===== -->
+      <section class="screen" id="community">
+        <div class="hdr"><div class="ptitle">Community</div><div class="acts"><div class="ib"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg></div></div></div>
+        <div class="composebar" onclick="openCompose()">
+          <div class="pic av" style="width:38px;height:38px">AT</div>
+          <div class="ph">Share what God did today…</div>
+          <div class="go"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div>
+        </div>
+        <div class="twtabs" id="commTabs">
+          <button class="on" onclick="ctab(this,'all')">For You</button>
+          <button onclick="ctab(this,'testimony')">Testimonies</button>
+          <button onclick="ctab(this,'outreach')">Outreach</button>
+          <button onclick="ctab(this,'prayer')">Prayer</button>
+          <button onclick="ctab(this,'nearby')">Nearby</button>
+        </div>
+        <div id="feedView">
+
+        <div class="post" data-cat="testimony" data-near="1">
+          <div class="ph"><div class="pic" style="background:linear-gradient(145deg,#F25C9A,#D6347C)" onclick="go('userprofile')">SM</div>
+            <div><div class="nm" onclick="go('userprofile')">Sarah M.</div><div class="mn">Atlanta, GA · 2h ago</div></div><div class="more">···</div></div>
+          <div class="body">Prayed with a woman outside the mall today. She said she had been asking God for a sign. Powerful moment! 🙏</div>
+          <div class="photo" style="background-image:linear-gradient(135deg,#3a2a1a,#1a1a22)"></div>
+          <div class="react">
+            <button class="rb on" onclick="rb(this)">🔥 Encouraged · 124</button>
+            <button class="rb pray" onclick="rb(this)">🙏 Praying · 2</button>
+            <button class="rb" onclick="rb(this)">💬 12</button>
+            <button class="rb" onclick="rb(this)">↗</button>
+          </div>
+        </div>
+
+        <div class="post" data-cat="outreach" data-near="1">
+          <div class="ph"><div class="pic" style="background:linear-gradient(145deg,#5B8DEF,#3F73D9)" onclick="go('userprofile')">DK</div>
+            <div><div class="nm" onclick="go('userprofile')">Daniel K.</div><div class="mn">DC Street Team · 4h ago</div></div><div class="more">···</div></div>
+          <div class="body">Starting outreach at Union Station at 6 PM. Anyone nearby is welcome to join. Let's reach our city! 🔥</div>
+          <div class="ev-banner">
+            <div style="width:42px;height:42px;border-radius:12px;background:rgba(255,107,0,.14);display:flex;align-items:center;justify-content:center;font-size:19px">📣</div>
+            <div class="info"><div class="it">Union Station Outreach</div><div class="is">Today · 6:00 PM · 8 going</div></div>
+            <button class="ev-join" onclick="this.textContent='Joined ✓';this.style.background='var(--green)';this.style.color='#06210f'">Join Outreach</button>
+          </div>
+          <div class="react">
+            <button class="rb" onclick="rb(this)">🔥 Encouraged · 56</button>
+            <button class="rb pray" onclick="rb(this)">🙏 Praying · 17</button>
+            <button class="rb" onclick="rb(this)">💬</button>
+            <button class="rb" onclick="rb(this)">↗</button>
+          </div>
+        </div>
+
+        <div class="post" data-cat="prayer">
+          <div class="ph"><div class="pic" style="background:linear-gradient(145deg,#34D17E,#1FA862)" onclick="go('userprofile')">MJ</div>
+            <div><div class="nm" onclick="go('userprofile')">Marcus J.</div><div class="mn">Baltimore, MD · 1d ago</div></div><div class="more">···</div></div>
+          <div class="body">Please pray for the students we met on campus today. A lot of them were open but hesitant. 🙏</div>
+          <div class="react">
+            <button class="rb pray" onclick="rb(this)">🙏 I'm praying · 38</button>
+            <button class="rb" onclick="rb(this)">🔥 Encouraged · 21</button>
+            <button class="rb" onclick="rb(this)">💬 6</button>
+            <button class="rb" onclick="rb(this)">↗</button>
+          </div>
+        </div>
+
+        <div class="post" data-cat="testimony">
+          <div class="ph"><div class="pic" style="background:linear-gradient(145deg,#8B83FF,#6C5CE7)" onclick="go('userprofile')">RA</div>
+            <div><div class="nm" onclick="go('userprofile')">Ruth A.</div><div class="mn">Lagos, NG · 1d ago</div></div><div class="more">···</div></div>
+          <div class="body">Three students gave their lives to Christ at outreach today. Starting a follow-up group this week. To God be the glory! ✝️</div>
+          <div class="react">
+            <button class="rb on" onclick="rb(this)">🔥 Encouraged · 203</button>
+            <button class="rb pray" onclick="rb(this)">🙏 Praying · 44</button>
+            <button class="rb" onclick="rb(this)">💬 19</button>
+            <button class="rb" onclick="rb(this)">↗</button>
+          </div>
+        </div>
+        </div><!-- /feedView -->
+
+        <div id="nearbyView" style="display:none">
+          <div class="live-strip">🟢 12 evangelists sharing the Gospel near you right now</div>
+          <div class="map" style="height:300px;margin-bottom:13px">
+            <svg class="base" viewBox="0 0 392 300" preserveAspectRatio="none">
+              <rect width="392" height="300" fill="var(--surface2)"/>
+              <g stroke="var(--line2)" stroke-width="14"><line x1="-10" y1="90" x2="402" y2="70"/><line x1="-10" y1="210" x2="402" y2="232"/><line x1="110" y1="-10" x2="80" y2="310"/><line x1="280" y1="-10" x2="310" y2="310"/></g>
+              <g stroke="var(--line)" stroke-width="6"><line x1="-10" y1="150" x2="402" y2="144"/></g>
+            </svg>
+            <div class="me-dot" style="left:50%;top:50%"></div>
+            <div class="livepin" style="left:30%;top:34%"><div class="av2">DK<span class="live-dot"></span></div><div class="lname">Daniel K.</div></div>
+            <div class="livepin" style="left:71%;top:42%"><div class="av2">SM<span class="live-dot"></span></div><div class="lname">Sarah M.</div></div>
+            <div class="livepin" style="left:56%;top:78%"><div class="av2">RA<span class="live-dot"></span></div><div class="lname">Ruth A.</div></div>
+          </div>
+          <div class="lbl" style="padding-left:4px">Evangelists Near You</div>
+          <div class="person" onclick="go('userprofile')">
+            <div class="pic" style="background:linear-gradient(145deg,#5B8DEF,#3F73D9)">DK</div>
+            <div><div class="nm">Daniel K.</div><div class="meta">🟢 Evangelising now · 0.4 mi away</div></div>
+            <div class="chev">›</div>
+          </div>
+          <div class="person" onclick="go('userprofile')">
+            <div class="pic" style="background:linear-gradient(145deg,#F25C9A,#D6347C)">SM</div>
+            <div><div class="nm">Sarah M.</div><div class="meta">🟢 Evangelising now · 0.9 mi away</div></div>
+            <div class="chev">›</div>
+          </div>
+          <div class="person" onclick="go('userprofile')">
+            <div class="pic" style="background:linear-gradient(145deg,#8B83FF,#6C5CE7)">RA</div>
+            <div><div class="nm">Ruth A.</div><div class="meta">🟢 Evangelising now · 1.2 mi away</div></div>
+            <div class="chev">›</div>
+          </div>
+          <button class="btn btn-primary mt" onclick="go('map')"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Open Full Map</button>
+        </div>
+      </section>
+
+      <!-- ===== PUBLIC PROFILE ===== -->
+      <section class="screen" id="userprofile">
+        <div class="back" onclick="go('community')"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Community</div>
+        <div class="dhead">
+          <div class="pic av" style="width:88px;height:88px">SM</div>
+          <div class="nm">Sarah Mitchell</div>
+          <div class="meta">Grace Community Church</div>
+          <div class="sub2">Atlanta, GA</div>
+        </div>
+        <div class="sub" style="text-align:center;font-size:13.5px;line-height:1.5;margin-bottom:14px">Street evangelist & worship leader. Sharing Jesus one conversation at a time. 🔥</div>
+        <div class="qa">
+          <div class="b"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Message</span></div>
+          <div class="b"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-9-9a5 5 0 0 1 9-3 5 5 0 0 1 9 3c-2 4.5-9 9-9 9z"/></svg><span>Pray for Sarah</span></div>
+          <div class="b"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span>Testimonies</span></div>
+        </div>
+        <div class="three g4">
+          <div><div class="v">96</div><div class="k">Convos</div></div>
+          <div><div class="v" style="color:var(--green)">17</div><div class="k">Saved</div></div>
+          <div><div class="v">42</div><div class="k">Follow-Ups</div></div>
+          <div><div class="v">9</div><div class="k">Churches</div></div>
+        </div>
+        <div class="card">
+          <div class="lbl">Recent Testimonies</div>
+          <div class="row"><div class="ic" style="background:rgba(255,107,0,.14);color:var(--accent)">🔥</div><div style="flex:1"><div class="t">Prayed with a woman outside the mall</div><div class="s">2h ago · 124 encouraged</div></div></div>
+          <div class="row"><div class="ic" style="background:rgba(255,107,0,.14);color:var(--accent)">✝️</div><div style="flex:1"><div class="t">A teenager gave his life to Christ</div><div class="s">3 days ago · 88 encouraged</div></div></div>
+        </div>
+        <div class="card">
+          <div class="lbl">Groups</div>
+          <div class="tags"><span class="tagx">Atlanta Street Team</span><span class="tagx">Campus Outreach</span><span class="tagx">Grace Community</span></div>
+        </div>
+      </section>
+
+      <!-- ===== PROFILE (own) ===== -->
+      <section class="screen" id="profile">
+        <div class="hdr"><div class="ptitle">Profile</div><div class="ib" onclick="go('settings')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8 2 2 0 1 1-2.8 2.8 1.6 1.6 0 0 0-2.7 1.1 2 2 0 1 1-4 0 1.6 1.6 0 0 0-2.6-1.1 2 2 0 1 1-2.8-2.8A1.6 1.6 0 0 0 3 14"/></svg></div></div>
+        <div class="dhead">
+          <div class="pic av" style="width:92px;height:92px">AT</div>
+          <div class="nm">Alex Thompson</div>
+          <div class="meta">Grace Community Church</div>
+          <div class="sub2">Atlanta, GA</div>
+        </div>
+        <div class="three g4" style="margin-top:6px">
+          <div><div class="v">128</div><div class="k">Convos</div></div>
+          <div><div class="v" style="color:var(--green)">23</div><div class="k">Salvations</div></div>
+          <div><div class="v">61</div><div class="k">Follow-Ups</div></div>
+          <div><div class="v">14</div><div class="k">Churches</div></div>
+        </div>
+        <div class="card">
+          <div class="lbl">Achievements <span class="va">View all</span></div>
+          <div class="ach">
+            <div class="hex"><div class="badge">💬</div><div class="n">First<br>Conversation</div></div>
+            <div class="hex"><div class="badge">✝️</div><div class="n">First<br>Salvation</div></div>
+            <div class="hex"><div class="badge">🔥</div><div class="n">7 Day<br>Streak</div></div>
+            <div class="hex lock"><div class="badge">🏅</div><div class="n">30 Day<br>Streak</div></div>
+          </div>
+        </div>
+        <div class="card streak" style="padding:16px 17px">
+          <div class="k">Longest Streak</div>
+          <div class="big" style="font-size:38px">12<small> days</small></div>
+          <div class="fl" style="width:54px;height:54px;font-size:28px">🔥</div>
+        </div>
+        <div class="card">
+          <div class="row" style="border:none;padding:6px 0"><div style="flex:1"><div class="t">🌙 Dark mode</div></div><div class="endbtn" style="background:var(--accent)" onclick="toggleTheme()"><svg viewBox="0 0 24 24" style="stroke:#fff"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg></div></div>
+        </div>
+      </section>
+
+      <!-- ===== SESSION LIVE ===== -->
+      <section class="screen" id="sessionlive">
+        <div class="hdr"><div class="back" onclick="go('dashboard')"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Outreach Session</div><div class="more" style="color:var(--faint);font-size:20px">···</div></div>
+        <div class="live-wrap">
+          <div class="live-badge"><span class="d"></span>YOU ARE LIVE</div>
+          <div class="timer" id="sTimer">00:00:00</div>
+          <div class="live-sub">Keep shining! ✨</div>
+        </div>
+        <div class="live-stats">
+          <div class="s" onclick="inc('cv',this)"><div class="v" id="cv">0</div><div class="k">Conversations</div><div class="plus">tap +1</div></div>
+          <div class="s" onclick="inc('pr',this)"><div class="v" id="pr">0</div><div class="k">Prayers</div><div class="plus">tap +1</div></div>
+          <div class="s" onclick="inc('pa',this)"><div class="v" id="pa">0</div><div class="k">People Added</div><div class="plus">tap +1</div></div>
+        </div>
+        <div class="loc">
+          <div class="ic">📍</div>
+          <div style="flex:1"><div class="t">Downtown Atlanta</div><div class="s">Good signal · Location active</div></div>
+        </div>
+        <button class="btn btn-primary" onclick="endSession()"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>End Session</button>
+        <button class="btn btn-soft mt"><svg viewBox="0 0 24 24"><rect x="7" y="5" width="3" height="14"/><rect x="14" y="5" width="3" height="14"/></svg>Pause</button>
+      </section>
+
+      <!-- ===== SESSION SUMMARY ===== -->
+      <section class="screen" id="sessionsummary">
+        <div class="sum-hero"><div class="fl">🔥</div><h2>Great job today!</h2><p>You were faithful in the mission.</p></div>
+        <div class="card sum-list">
+          <div class="r"><div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div class="v" id="sumTime">45:12</div><div class="k">Session Duration</div></div>
+          <div class="r"><div class="ic"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div class="v" id="sumCv">4</div><div class="k">Conversations</div></div>
+          <div class="r"><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-9-9a5 5 0 0 1 9-3 5 5 0 0 1 9 3c-2 4.5-9 9-9 9z"/></svg></div><div class="v" id="sumPr">2</div><div class="k">Prayers</div></div>
+          <div class="r"><div class="ic"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg></div><div class="v" id="sumPa">1</div><div class="k">People Added</div></div>
+        </div>
+        <div class="sub" style="text-align:center;margin:4px 0 16px;color:var(--accent2);font-family:'Sora';font-weight:700">Keep going! Souls matter. 🙌</div>
+        <button class="btn btn-primary" onclick="go('dashboard')">View Recap</button>
+        <button class="btn btn-ghost mt" onclick="openCompose('testimony')"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Share Testimony</button>
+      </section>
+
+      <!-- ===== MAP ===== -->
+      <section class="screen" id="map">
+        <div class="hdr"><div class="ptitle">Live Map</div><div class="acts"><div class="ib"><svg viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div></div></div>
+        <div class="live-strip">🟢 12 evangelists sharing the Gospel right now</div>
+        <div class="map">
+          <svg class="base" viewBox="0 0 392 420" preserveAspectRatio="none">
+            <rect width="392" height="420" fill="var(--surface2)"/>
+            <g stroke="var(--line2)" stroke-width="15"><line x1="-10" y1="115" x2="402" y2="86"/><line x1="-10" y1="300" x2="402" y2="330"/><line x1="100" y1="-10" x2="66" y2="430"/><line x1="270" y1="-10" x2="305" y2="430"/></g>
+            <g stroke="var(--line)" stroke-width="7"><line x1="-10" y1="208" x2="402" y2="200"/><line x1="190" y1="-10" x2="184" y2="430"/></g>
+            <g fill="var(--line)"><rect x="24" y="30" width="54" height="56" rx="5"/><rect x="312" y="42" width="58" height="46" rx="5"/><rect x="116" y="334" width="62" height="58" rx="5"/><rect x="232" y="236" width="56" height="50" rx="5"/></g>
+          </svg>
+          <div class="me-dot" style="left:50%;top:46%"></div>
+          <div class="livepin" style="left:30%;top:28%"><div class="av2">DK<span class="live-dot"></span></div><div class="lname">Daniel K.</div></div>
+          <div class="livepin" style="left:72%;top:34%"><div class="av2">SM<span class="live-dot"></span></div><div class="lname">Sarah M.</div></div>
+          <div class="livepin" style="left:40%;top:62%"><div class="av2">RA<span class="live-dot"></span></div><div class="lname">Ruth A.</div></div>
+          <div class="livepin" style="left:80%;top:60%"><div class="av2">JC<span class="live-dot"></span></div><div class="lname">James C.</div></div>
+          <div class="map-sheet">
+            <div class="h"><div><div class="t">Downtown Atlanta</div><div class="s">Active Area</div></div><div class="x">✕</div></div>
+            <div class="three"><div><div class="v">12</div><div class="k">Evangelists</div></div><div><div class="v">5</div><div class="k">Outreaches Today</div></div><div><div class="v">3</div><div class="k">Churches Nearby</div></div></div>
+            <button class="btn btn-primary" style="padding:13px">View Area</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== DAILY ENCOURAGEMENT ===== -->
+      <section class="screen" id="encouragement">
+        <div class="hdr"><div class="back" onclick="go('dashboard')"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Daily Encouragement</div></div>
+        <div class="verse-card">
+          <div class="newv" onclick="newVerse()">New Verse</div>
+          <div class="q">"</div>
+          <p id="verseText">And he said to them, "Go into all the world and proclaim the gospel to the whole creation."</p>
+          <div class="ref" id="verseRef">— MARK 16:15</div>
+        </div>
+        <div class="sub" style="font-size:15px;color:var(--text);font-weight:600;text-align:center;margin-bottom:16px">You are God's hands and feet.<br>Keep being faithful! 🙌</div>
+        <div class="card">
+          <div class="lbl">Today's Mission</div>
+          <div class="mission-row done"><div class="mcheck on">✓</div><div class="t">Pray for boldness</div></div>
+          <div class="mission-row" onclick="this.classList.toggle('done');this.querySelector('.mcheck').classList.toggle('on');this.querySelector('.mcheck').textContent=this.querySelector('.mcheck').classList.contains('on')?'✓':''"><div class="mcheck"></div><div class="t">Share the Gospel with someone</div></div>
+          <div class="mission-row" onclick="this.classList.toggle('done');this.querySelector('.mcheck').classList.toggle('on');this.querySelector('.mcheck').textContent=this.querySelector('.mcheck').classList.contains('on')?'✓':''"><div class="mcheck"></div><div class="t">Encourage another evangelist</div></div>
+        </div>
+        <button class="btn btn-primary" onclick="go('dashboard')">I'm on it! 🙌</button>
+      </section>
+
+      <!-- ===== COMPOSE ===== -->
+      <section class="screen" id="compose">
+        <div class="hdr"><div class="back" onclick="go('community')"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Create Post</div><div style="font-family:'Sora';font-weight:800;color:var(--accent);cursor:pointer" onclick="celebrate('🙌','Posted to community!','Your testimony will encourage evangelists around the world.'); go('community')">Post</div></div>
+        <div class="compose">
+          <textarea placeholder="Share what God did today…"></textarea>
+          <div class="type-row">
+            <div class="t on" onclick="ptype(this)">🔥 Testimony</div>
+            <div class="t" onclick="ptype(this)">📣 Outreach</div>
+            <div class="t" onclick="ptype(this)">🙏 Prayer</div>
+            <div class="t" onclick="ptype(this)">✝️ Salvation</div>
+          </div>
+          <button class="btn btn-soft"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add Photo</button>
+        </div>
+      </section>
+
+      <!-- ===== SETTINGS ===== -->
+      <section class="screen" id="settings">
+        <div class="hdr"><div class="back" onclick="go('profile')"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Settings</div></div>
+        <div class="card">
+          <div class="row"><div style="flex:1"><div class="t">🌙 Dark mode</div><div class="s">Switch the app theme</div></div><div class="endbtn" style="background:var(--accent)" onclick="toggleTheme()"><svg viewBox="0 0 24 24" style="stroke:#fff"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg></div></div>
+          <div class="row"><div style="flex:1"><div class="t">🔔 Daily reminder</div><div class="s">Nudge me to keep my streak</div></div><div class="endbtn">🔛</div></div>
+          <div class="row"><div style="flex:1"><div class="t">📍 Map visibility</div><div class="s">Show me to nearby evangelists</div></div><div class="endbtn">🔛</div></div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- NAV -->
+    <nav class="nav">
+      <button class="on" data-t="dashboard" onclick="go('dashboard')"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>Dashboard</button>
+      <button data-t="community" onclick="go('community')"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Community</button>
+      <button class="fab" onclick="openSheet()"><span class="circ"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="lab">Start</span></button>
+      <button data-t="map" onclick="go('map')"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Map</button>
+      <button data-t="profile" onclick="go('profile')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>Profile</button>
+    </nav>
+
+    <!-- ACTION SHEET -->
+    <div class="scrim" id="scrim" onclick="if(event.target===this)closeSheet()">
+      <div class="sheet">
+        <div class="grip"></div>
+        <h3>What happened today?</h3>
+        <div class="ssub">Go do the mission — then track it here.</div>
+        <div class="opt" onclick="closeSheet();startSession()"><div class="oic" style="background:linear-gradient(145deg,#FF8A2B,#E24E00)"><svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9z"/></svg></div><div><div class="ot">Start Outreach Session</div><div class="os">Go live and track your session.</div></div></div>
+        <div class="opt" onclick="closeSheet();go('addperson')"><div class="oic" style="background:linear-gradient(145deg,#5B8DEF,#3F73D9)"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg></div><div><div class="ot">Add Person</div><div class="os">Save someone for follow-up.</div></div></div>
+        <div class="opt" onclick="closeSheet();go('people')"><div class="oic" style="background:linear-gradient(145deg,#22B07A,#178A5E)"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg></div><div><div class="ot">My People</div><div class="os">View &amp; follow up with everyone you've met.</div></div></div>
+        <div class="opt" onclick="closeSheet();celebrate('💬','Conversation logged!','Another Gospel seed planted. Well done.')"><div class="oic" style="background:linear-gradient(145deg,#34D17E,#1FA862)"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div><div class="ot">Log Conversation</div><div class="os">Record a Gospel conversation.</div></div></div>
+        <div class="opt" onclick="closeSheet();celebrate('🙏','Prayer logged!','You stood in the gap for someone today.')"><div class="oic" style="background:linear-gradient(145deg,#8B83FF,#6C5CE7)"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-9-9a5 5 0 0 1 9-3 5 5 0 0 1 9 3c-2 4.5-9 9-9 9z"/></svg></div><div><div class="ot">Log Prayer</div><div class="os">Track someone you prayed with.</div></div></div>
+        <div class="opt" onclick="closeSheet();openCompose('testimony')"><div class="oic" style="background:linear-gradient(145deg,#F25C9A,#D6347C)"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div><div><div class="ot">Create Testimony Post</div><div class="os">Share what happened with the community.</div></div></div>
+        <div class="opt-cancel" onclick="closeSheet()">Cancel</div>
+      </div>
+    </div>
+
+    <!-- CELEBRATE -->
+    <div class="celebrate" id="celebrate" onclick="this.classList.remove('show')">
+      <div class="big" id="celEmoji">🎉</div>
+      <h2 id="celTitle">Logged!</h2>
+      <p id="celText"></p>
+      <div class="tapnote">tap to continue</div>
+    </div>
+  </div>
+
+<script>
+  function go(id){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    const el=document.getElementById(id); el.classList.add('active');
+    document.getElementById('scroller').scrollTop=0;
+    const map={people:null,contact:null,addperson:null,userprofile:'community',sessionlive:null,sessionsummary:null,encouragement:'dashboard',compose:'community',settings:'profile'};
+    const navId = map.hasOwnProperty(id)?map[id]:id;
+    document.querySelectorAll('.nav button[data-t]').forEach(b=>b.classList.toggle('on', b.dataset.t===navId));
+  }
+  function setTheme(t){
+    document.getElementById('phone').setAttribute('data-theme',t);
+    document.body.classList.toggle('lightpage', t==='light');
+    document.getElementById('tDark').classList.toggle('on', t==='dark');
+    document.getElementById('tLight').classList.toggle('on', t==='light');
+  }
+  function toggleTheme(){ setTheme(document.getElementById('phone').getAttribute('data-theme')==='dark'?'light':'dark'); }
+
+  // action sheet
+  function openSheet(){ document.getElementById('scrim').classList.add('show'); }
+  function closeSheet(){ document.getElementById('scrim').classList.remove('show'); }
+
+  // session
+  let sTimer=null, sSecs=0, c={cv:0,pr:0,pa:0};
+  function startSession(){
+    c={cv:0,pr:0,pa:0}; sSecs=0;
+    ['cv','pr','pa'].forEach(k=>document.getElementById(k).textContent='0');
+    go('sessionlive'); clearInterval(sTimer);
+    const tick=()=>{sSecs++;const h=String(Math.floor(sSecs/3600)).padStart(2,'0'),m=String(Math.floor(sSecs%3600/60)).padStart(2,'0'),s=String(sSecs%60).padStart(2,'0');document.getElementById('sTimer').textContent=h+':'+m+':'+s;};
+    tick(); sTimer=setInterval(tick,1000);
+  }
+  function inc(k,el){ c[k]++; document.getElementById(k).textContent=c[k]; el.style.transform='scale(1.06)'; setTimeout(()=>el.style.transform='',120); }
+  function endSession(){
+    clearInterval(sTimer);
+    const m=String(Math.floor(sSecs/60)).padStart(2,'0'),s=String(sSecs%60).padStart(2,'0');
+    document.getElementById('sumTime').textContent=m+':'+s;
+    document.getElementById('sumCv').textContent=c.cv; document.getElementById('sumPr').textContent=c.pr; document.getElementById('sumPa').textContent=c.pa;
+    go('sessionsummary');
+  }
+
+  // community
+  function rb(el){ el.classList.toggle('on'); }
+  function ctab(el,cat){
+    document.querySelectorAll('#commTabs button').forEach(b=>b.classList.remove('on')); el.classList.add('on');
+    const nearby = cat==='nearby';
+    document.getElementById('feedView').style.display = nearby?'none':'block';
+    document.getElementById('nearbyView').style.display = nearby?'block':'none';
+    if(!nearby){ document.querySelectorAll('#feedView .post').forEach(p=>{ p.style.display=(cat==='all'||p.dataset.cat===cat)?'block':'none'; }); }
+  }
+  function openCompose(){ go('compose'); }
+  function ptype(el){ document.querySelectorAll('.type-row .t').forEach(t=>t.classList.remove('on')); el.classList.add('on'); }
+
+  // verses
+  const verses=[
+    ['And he said to them, "Go into all the world and proclaim the gospel to the whole creation."','— MARK 16:15'],
+    ['"You will receive power when the Holy Spirit has come upon you, and you will be my witnesses."','— ACTS 1:8'],
+    ['"How beautiful are the feet of those who bring good news!"','— ROMANS 10:15'],
+    ['"Let your light shine before others, that they may see your good works and glorify your Father."','— MATTHEW 5:16'],
+  ];
+  let vi=0;
+  function newVerse(){ vi=(vi+1)%verses.length; document.getElementById('verseText').textContent=verses[vi][0]; document.getElementById('verseRef').textContent=verses[vi][1]; }
+
+  // celebrate
+  function celebrate(e,t,x){ document.getElementById('celEmoji').textContent=e; document.getElementById('celTitle').textContent=t; document.getElementById('celText').textContent=x; document.getElementById('celebrate').classList.add('show'); }
+
+  // chips (people)
+  document.querySelectorAll('#people .chip').forEach(c=>c.addEventListener('click',()=>{document.querySelectorAll('#people .chip').forEach(x=>x.classList.remove('on'));c.classList.add('on');}));
+</script>
+</body>
+</html>
