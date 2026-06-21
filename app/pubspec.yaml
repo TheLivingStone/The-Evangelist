@@ -38,6 +38,26 @@ dependencies:
   flutter_riverpod: ^3.3.2
   go_router: ^17.3.0
   intl: ^0.20.2
+  # Loads the bundled .env asset at runtime so config lives in one place (see
+  # lib/core/env.dart). Only PUBLIC keys are bundled — never the Clerk secret.
+  flutter_dotenv: ^6.0.1
+  # Backs the web Clerk token persistor (lib/core/clerk_web_persistor.dart):
+  # Clerk's default persistor uses path_provider, which has no web support.
+  shared_preferences: ^2.3.2
+  # Clerk owns identity (iOS/Android/web). The Clerk session JWT is forwarded
+  # to Supabase via Supabase.initialize(accessToken:) — see lib/core/supabase.dart.
+  # Pre-1.0 beta: pin within the 0.0.x line to avoid surprise breaking jumps.
+  clerk_flutter: '>=0.0.16-beta <0.1.0'
+  # The pure-Dart core (User, SessionToken, ClerkError models). Declared
+  # explicitly because lib/core/supabase.dart imports it directly.
+  # Same beta line that clerk_flutter depends on, to keep resolution aligned.
+  clerk_auth: '>=0.0.16-beta <0.1.0'
+  flutter_map: ^8.3.0
+  latlong2: ^0.9.1
+  geolocator: ^13.0.4
+  # Lets users attach a photo to a community post (composer). Returns an XFile
+  # whose bytes are uploaded to the public 'post-photos' Supabase bucket.
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:
@@ -52,6 +72,13 @@ dev_dependencies:
   integration_test:
     sdk: flutter
 
+# Pin device_info_plus to 12.3.0: 12.4.0+ call the iOS 26 SDK selector
+# `isiOSAppOnVision`, which fails to compile on Xcode 16.4 (iOS 18 SDK).
+# 12.3.0 is the newest release without that call. Pulled in transitively via
+# passkeys (constraint >=11.2.0 <14.0.0). Remove this once Xcode ships the iOS 26 SDK.
+dependency_overrides:
+  device_info_plus: 12.3.0
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
@@ -62,6 +89,12 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # The runtime config file, bundled so flutter_dotenv can read it. It is
+  # gitignored (contains environment config) but still bundles from the working
+  # tree at build time. Only public keys live here — never secrets.
+  assets:
+    - .env
 
   # To add assets to your application, add an assets section, like this:
   # assets:

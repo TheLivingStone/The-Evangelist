@@ -14,9 +14,9 @@ class SessionLiveScreen extends ConsumerStatefulWidget {
 }
 
 class _SessionLiveScreenState extends ConsumerState<SessionLiveScreen> {
-  int _conversations = 0;
-  int _prayers = 0;
-  int _peopleAdded = 0;
+  late int _conversations = widget.session.conversationsCount;
+  late int _prayers = widget.session.prayersCount;
+  late int _peopleAdded = widget.session.peopleAddedCount;
   Duration _elapsed = Duration.zero;
   Timer? _timer;
   bool _ending = false;
@@ -26,7 +26,11 @@ class _SessionLiveScreenState extends ConsumerState<SessionLiveScreen> {
     super.initState();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       setState(() {
-        _elapsed = DateTime.now().difference(widget.session.startedAt);
+        // startedAt is a UTC timestamp from Postgres; compare in UTC so the
+        // elapsed time isn't skewed by the device's timezone offset.
+        _elapsed = DateTime.now().toUtc().difference(
+          widget.session.startedAt.toUtc(),
+        );
       });
     });
   }
@@ -46,29 +50,39 @@ class _SessionLiveScreenState extends ConsumerState<SessionLiveScreen> {
 
   Future<void> _end() async {
     setState(() => _ending = true);
-    await ref.read(sessionsRepoProvider).end(
-          widget.session.id,
-          conversations: _conversations,
-          prayers: _prayers,
-          peopleAdded: _peopleAdded,
-        );
-    ref.invalidate(liveSessionProvider);
-    ref.invalidate(myProfileProvider);
-    ref.invalidate(monthCountsProvider);
-    ref.invalidate(recentActivityProvider);
-    ref.invalidate(weekDaysActiveProvider);
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => SessionSummaryScreen(
-            duration: _elapsed,
+    try {
+      await ref
+          .read(sessionsRepoProvider)
+          .end(
+            widget.session.id,
             conversations: _conversations,
             prayers: _prayers,
             peopleAdded: _peopleAdded,
+          );
+      ref.invalidate(liveSessionProvider);
+      ref.invalidate(myProfileProvider);
+      ref.invalidate(monthCountsProvider);
+      ref.invalidate(recentActivityProvider);
+      ref.invalidate(weekDaysActiveProvider);
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => SessionSummaryScreen(
+              duration: _elapsed,
+              conversations: _conversations,
+              prayers: _prayers,
+              peopleAdded: _peopleAdded,
+            ),
           ),
-        ),
-      );
+        );
+      }
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _ending = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not end session: $error')));
     }
   }
 
@@ -93,40 +107,56 @@ class _SessionLiveScreenState extends ConsumerState<SessionLiveScreen> {
                   width: 10,
                   height: 10,
                   decoration: const BoxDecoration(
-                      color: AppColors.green, shape: BoxShape.circle),
+                    color: AppColors.green,
+                    shape: BoxShape.circle,
+                  ),
                 ),
                 const SizedBox(width: 8),
-                const Text('You are evangelising',
-                    style: TextStyle(color: Colors.white70)),
+                const Text(
+                  'You are evangelising',
+                  style: TextStyle(color: Colors.white70),
+                ),
               ],
             ),
             const SizedBox(height: 24),
-            Text(_fmt,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 56,
-                    fontWeight: FontWeight.w800,
-                    fontFeatures: [FontFeature.tabularFigures()])),
+            Text(
+              _fmt,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 56,
+                fontWeight: FontWeight.w800,
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
+            ),
             const SizedBox(height: 32),
-            _counter('💬 Conversations', _conversations,
-                () => setState(() => _conversations++)),
             _counter(
-                '🙏 Prayers', _prayers, () => setState(() => _prayers++)),
-            _counter('👥 People Added', _peopleAdded,
-                () => setState(() => _peopleAdded++)),
+              '💬 Conversations',
+              _conversations,
+              () => setState(() => _conversations++),
+            ),
+            _counter('🙏 Prayers', _prayers, () => setState(() => _prayers++)),
+            _counter(
+              '👥 People Added',
+              _peopleAdded,
+              () => setState(() => _peopleAdded++),
+            ),
             const Spacer(),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE5484D)),
+                  backgroundColor: const Color(0xFFE5484D),
+                ),
                 onPressed: _ending ? null : _end,
                 child: _ending
                     ? const SizedBox(
                         height: 20,
                         width: 20,
                         child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2))
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
                     : const Text('End Session'),
               ),
             ),
@@ -144,20 +174,24 @@ class _SessionLiveScreenState extends ConsumerState<SessionLiveScreen> {
         child: Row(
           children: [
             Expanded(
-                child: Text(label,
-                    style: const TextStyle(
-                        color: Colors.white, fontSize: 16))),
-            Text('$value',
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800)),
+              child: Text(
+                label,
+                style: const TextStyle(color: Colors.white, fontSize: 16),
+              ),
+            ),
+            Text(
+              '$value',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
             const SizedBox(width: 12),
             IconButton.filled(
               onPressed: onTap,
               icon: const Icon(Icons.add),
-              style:
-                  IconButton.styleFrom(backgroundColor: AppColors.accent),
+              style: IconButton.styleFrom(backgroundColor: AppColors.accent),
             ),
           ],
         ),

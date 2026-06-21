@@ -95,18 +95,17 @@ class AppTheme {
         ),
         hintStyle: TextStyle(color: muted),
       ),
-      textTheme: Typography.material2021().white.apply(
-            bodyColor: text,
-            displayColor: text,
-          ).merge(
-            TextTheme(bodyMedium: TextStyle(color: text)),
-          ),
+      textTheme: Typography.material2021().white
+          .apply(bodyColor: text, displayColor: text)
+          .merge(TextTheme(bodyMedium: TextStyle(color: text))),
       dividerColor: dark
           ? Colors.white.withValues(alpha: 0.07)
           : const Color(0xFFE0E0D8),
     );
   }
 
-  static ThemeData get dark => _base(Brightness.dark);
-  static ThemeData get light => _base(Brightness.light);
+  // ThemeData construction is relatively expensive. These immutable instances
+  // are reused across every mode change instead of rebuilding both themes.
+  static final ThemeData dark = _base(Brightness.dark);
+  static final ThemeData light = _base(Brightness.light);
 }

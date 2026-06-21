@@ -20,10 +20,22 @@ class _AddPersonScreenState extends ConsumerState<AddPersonScreen> {
   DateTime? _nextFollowup = DateTime.now().add(const Duration(days: 1));
   bool _busy = false;
 
+  @override
+  void dispose() {
+    _first.dispose();
+    _last.dispose();
+    _phone.dispose();
+    _email.dispose();
+    _met.dispose();
+    _notes.dispose();
+    super.dispose();
+  }
+
   Future<void> _save() async {
     if (_first.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('First name is required')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('First name is required')));
       return;
     }
     setState(() => _busy = true);
@@ -37,11 +49,17 @@ class _AddPersonScreenState extends ConsumerState<AddPersonScreen> {
         if (_notes.text.trim().isNotEmpty) 'notes': _notes.text.trim(),
         'status': _status,
         if (_nextFollowup != null)
-          'next_followup_at':
-              _nextFollowup!.toIso8601String().substring(0, 10),
+          'next_followup_at': _nextFollowup!.toIso8601String().substring(0, 10),
       });
+      ref.invalidate(contactsListProvider);
       ref.invalidate(dueFollowupsProvider);
       if (mounted) Navigator.pop(context);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not save person: $error')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -64,8 +82,10 @@ class _AddPersonScreenState extends ConsumerState<AddPersonScreen> {
             initialValue: _status,
             decoration: const InputDecoration(labelText: 'Spiritual status'),
             items: spiritualStatuses
-                .map((s) =>
-                    DropdownMenuItem(value: s, child: Text(prettyStatus(s))))
+                .map(
+                  (s) =>
+                      DropdownMenuItem(value: s, child: Text(prettyStatus(s))),
+                )
                 .toList(),
             onChanged: (v) => setState(() => _status = v ?? 'new_contact'),
           ),
@@ -73,9 +93,11 @@ class _AddPersonScreenState extends ConsumerState<AddPersonScreen> {
           ListTile(
             contentPadding: EdgeInsets.zero,
             title: const Text('Next follow-up'),
-            subtitle: Text(_nextFollowup == null
-                ? 'None'
-                : _nextFollowup!.toIso8601String().substring(0, 10)),
+            subtitle: Text(
+              _nextFollowup == null
+                  ? 'None'
+                  : _nextFollowup!.toIso8601String().substring(0, 10),
+            ),
             trailing: const Icon(Icons.calendar_today),
             onTap: () async {
               final picked = await showDatePicker(
@@ -96,7 +118,10 @@ class _AddPersonScreenState extends ConsumerState<AddPersonScreen> {
                     height: 20,
                     width: 20,
                     child: CircularProgressIndicator(
-                        color: Colors.white, strokeWidth: 2))
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
                 : const Text('Save Person'),
           ),
         ],
@@ -104,8 +129,12 @@ class _AddPersonScreenState extends ConsumerState<AddPersonScreen> {
     );
   }
 
-  Widget _field(TextEditingController c, String label,
-      {TextInputType? keyboard, int maxLines = 1}) {
+  Widget _field(
+    TextEditingController c,
+    String label, {
+    TextInputType? keyboard,
+    int maxLines = 1,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: TextField(

@@ -31,8 +31,10 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.accent,
         onPressed: () async {
-          await Navigator.push(context,
-              MaterialPageRoute(builder: (_) => const AddPersonScreen()));
+          await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AddPersonScreen()),
+          );
           ref.invalidate(contactsListProvider(_filter));
         },
         child: const Icon(Icons.person_add, color: Colors.white),
@@ -45,16 +47,17 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 12),
               children: _chips
-                  .map((c) => Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: ChoiceChip(
-                          label: Text(c.$2),
-                          selected: _filter == c.$1,
-                          selectedColor:
-                              AppColors.accent.withValues(alpha: 0.25),
-                          onSelected: (_) => setState(() => _filter = c.$1),
-                        ),
-                      ))
+                  .map(
+                    (c) => Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(c.$2),
+                        selected: _filter == c.$1,
+                        selectedColor: AppColors.accent.withValues(alpha: 0.25),
+                        onSelected: (_) => setState(() => _filter = c.$1),
+                      ),
+                    ),
+                  )
                   .toList(),
             ),
           ),
@@ -62,7 +65,8 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
             child: contacts.when(
               data: (list) => list.isEmpty
                   ? const Center(
-                      child: Text('Add the first person you meet. 🙂'))
+                      child: Text('Add the first person you meet. 🙂'),
+                    )
                   : ListView.builder(
                       padding: const EdgeInsets.all(12),
                       itemCount: list.length,
@@ -73,8 +77,9 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                       ),
                     ),
               loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.accent)),
-              error: (e, __) => Center(child: Text('Error: $e')),
+                child: CircularProgressIndicator(color: AppColors.accent),
+              ),
+              error: (e, _) => Center(child: Text('Error: $e')),
             ),
           ),
         ],
@@ -90,7 +95,8 @@ class _ContactTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final due = contact.nextFollowupAt != null &&
+    final due =
+        contact.nextFollowupAt != null &&
         !contact.nextFollowupAt!.isAfter(DateTime.now());
     return Card(
       child: ListTile(
@@ -99,27 +105,32 @@ class _ContactTile extends StatelessWidget {
           child: Text(contact.firstName.characters.first),
         ),
         title: Text(contact.displayName),
-        subtitle: Text([
-          contact.metLocation,
-          prettyStatus(contact.status),
-        ].where((e) => e != null && e.toString().isNotEmpty).join(' · ')),
+        subtitle: Text(
+          [
+            contact.metLocation,
+            prettyStatus(contact.status),
+          ].where((e) => e != null && e.toString().isNotEmpty).join(' · '),
+        ),
         trailing: due
             ? Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppColors.accent,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Text('Due',
-                    style: TextStyle(color: Colors.white, fontSize: 11)),
+                child: const Text(
+                  'Due',
+                  style: TextStyle(color: Colors.white, fontSize: 11),
+                ),
               )
             : const Icon(Icons.chevron_right),
         onTap: () async {
           await Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (_) => PersonProfileScreen(contact: contact)));
+            context,
+            MaterialPageRoute(
+              builder: (_) => PersonProfileScreen(contact: contact),
+            ),
+          );
           onChanged();
         },
       ),

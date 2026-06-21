@@ -28,7 +28,13 @@ class _EncouragementScreenState extends ConsumerState<EncouragementScreen> {
 
   Future<void> _newVerse() async {
     setState(() => _loading = true);
-    final v = await ref.read(encouragementRepoProvider).randomVerse();
+    Verse? v;
+    try {
+      v = await ref.read(encouragementRepoProvider).randomVerse();
+    } catch (_) {
+      v = null;
+    }
+    if (!mounted) return;
     setState(() {
       _verse = v;
       _loading = false;
@@ -58,13 +64,16 @@ class _EncouragementScreenState extends ConsumerState<EncouragementScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('"${_verse?.text ?? ''}"',
+                        Text(
+                            _verse == null
+                                ? 'Go into all the world and proclaim the gospel to the whole creation.'
+                                : '"${_verse!.text}"',
                             style: const TextStyle(
                                 fontSize: 18,
                                 fontStyle: FontStyle.italic,
                                 fontWeight: FontWeight.w600)),
                         const SizedBox(height: 12),
-                        Text('— ${_verse?.reference ?? ''}',
+                        Text('— ${_verse?.reference ?? 'Mark 16:15'}',
                             style: const TextStyle(
                                 fontWeight: FontWeight.w800,
                                 color: AppColors.accent)),

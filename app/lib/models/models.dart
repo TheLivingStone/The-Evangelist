@@ -46,26 +46,26 @@ class Profile {
   });
 
   factory Profile.fromMap(Map<String, dynamic> m) => Profile(
-        id: m['id'],
-        fullName: m['full_name'] ?? 'Evangelist',
-        username: m['username'],
-        city: m['city'],
-        church: m['church'],
-        ministry: m['ministry'],
-        bio: m['bio'],
-        avatarUrl: m['avatar_url'],
-        isVisibleOnMap: m['is_visible_on_map'] ?? true,
-        dailyReminderEnabled: m['daily_reminder_enabled'] ?? true,
-        theme: m['theme'] ?? 'dark',
-        currentStreak: m['current_streak'] ?? 0,
-        longestStreak: m['longest_streak'] ?? 0,
-        lastEvangelismDate: _date(m['last_evangelism_date']),
-        weeklyGoal: m['weekly_goal'] ?? 5,
-        totalConversations: m['total_conversations'] ?? 0,
-        totalSalvations: m['total_salvations'] ?? 0,
-        totalFollowups: m['total_followups'] ?? 0,
-        totalChurchConnections: m['total_church_connections'] ?? 0,
-      );
+    id: m['id'],
+    fullName: m['full_name'] ?? 'Evangelist',
+    username: m['username'],
+    city: m['city'],
+    church: m['church'],
+    ministry: m['ministry'],
+    bio: m['bio'],
+    avatarUrl: m['avatar_url'],
+    isVisibleOnMap: m['is_visible_on_map'] ?? true,
+    dailyReminderEnabled: m['daily_reminder_enabled'] ?? true,
+    theme: m['theme'] ?? 'dark',
+    currentStreak: m['current_streak'] ?? 0,
+    longestStreak: m['longest_streak'] ?? 0,
+    lastEvangelismDate: _date(m['last_evangelism_date']),
+    weeklyGoal: m['weekly_goal'] ?? 5,
+    totalConversations: m['total_conversations'] ?? 0,
+    totalSalvations: m['total_salvations'] ?? 0,
+    totalFollowups: m['total_followups'] ?? 0,
+    totalChurchConnections: m['total_church_connections'] ?? 0,
+  );
 }
 
 const spiritualStatuses = [
@@ -77,13 +77,13 @@ const spiritualStatuses = [
 ];
 
 String prettyStatus(String s) => switch (s) {
-      'new_contact' => 'New Contact',
-      'accepted_christ' => 'Accepted Christ',
-      'followup_started' => 'Follow-Up Started',
-      'connected_to_church' => 'Connected to Church',
-      'active' => 'Active',
-      _ => s,
-    };
+  'new_contact' => 'New Contact',
+  'accepted_christ' => 'Accepted Christ',
+  'followup_started' => 'Follow-Up Started',
+  'connected_to_church' => 'Connected to Church',
+  'active' => 'Active',
+  _ => s,
+};
 
 class Contact {
   final String id;
@@ -120,20 +120,20 @@ class Contact {
       [firstName, lastName].where((e) => e != null && e.isNotEmpty).join(' ');
 
   factory Contact.fromMap(Map<String, dynamic> m) => Contact(
-        id: m['id'],
-        ownerId: m['owner_id'],
-        firstName: m['first_name'],
-        lastName: m['last_name'],
-        phone: m['phone'],
-        email: m['email'],
-        city: m['city'],
-        metLocation: m['met_location'],
-        dateMet: _date(m['date_met']) ?? DateTime.now(),
-        status: m['status'] ?? 'new_contact',
-        notes: m['notes'],
-        nextFollowupAt: _date(m['next_followup_at']),
-        tags: (m['tags'] as List?)?.map((e) => e.toString()).toList() ?? [],
-      );
+    id: m['id'],
+    ownerId: m['owner_id'],
+    firstName: m['first_name'],
+    lastName: m['last_name'],
+    phone: m['phone'],
+    email: m['email'],
+    city: m['city'],
+    metLocation: m['met_location'],
+    dateMet: _date(m['date_met']) ?? DateTime.now(),
+    status: m['status'] ?? 'new_contact',
+    notes: m['notes'],
+    nextFollowupAt: _date(m['next_followup_at']),
+    tags: (m['tags'] as List?)?.map((e) => e.toString()).toList() ?? [],
+  );
 }
 
 class ActivityLog {
@@ -156,14 +156,14 @@ class ActivityLog {
   });
 
   factory ActivityLog.fromMap(Map<String, dynamic> m) => ActivityLog(
-        id: m['id'],
-        userId: m['user_id'],
-        type: m['type'],
-        contactId: m['contact_id'],
-        sessionId: m['session_id'],
-        note: m['note'],
-        occurredAt: _date(m['occurred_at']) ?? DateTime.now(),
-      );
+    id: m['id'],
+    userId: m['user_id'],
+    type: m['type'],
+    contactId: m['contact_id'],
+    sessionId: m['session_id'],
+    note: m['note'],
+    occurredAt: _date(m['occurred_at']) ?? DateTime.now(),
+  );
 }
 
 class OutreachSession {
@@ -192,17 +192,17 @@ class OutreachSession {
   });
 
   factory OutreachSession.fromMap(Map<String, dynamic> m) => OutreachSession(
-        id: m['id'],
-        userId: m['user_id'],
-        startedAt: _date(m['started_at']) ?? DateTime.now(),
-        endedAt: _date(m['ended_at']),
-        durationSeconds: m['duration_seconds'],
-        locationName: m['location_name'],
-        conversationsCount: m['conversations_count'] ?? 0,
-        prayersCount: m['prayers_count'] ?? 0,
-        peopleAddedCount: m['people_added_count'] ?? 0,
-        status: m['status'] ?? 'live',
-      );
+    id: m['id'],
+    userId: m['user_id'],
+    startedAt: _date(m['started_at']) ?? DateTime.now(),
+    endedAt: _date(m['ended_at']),
+    durationSeconds: m['duration_seconds'],
+    locationName: m['location_name'],
+    conversationsCount: m['conversations_count'] ?? 0,
+    prayersCount: m['prayers_count'] ?? 0,
+    peopleAddedCount: m['people_added_count'] ?? 0,
+    status: m['status'] ?? 'live',
+  );
 }
 
 class Post {
@@ -216,6 +216,7 @@ class Post {
   final Profile? author;
   final Map<String, int> reactionCounts;
   final Set<String> myReactions;
+  final int commentCount;
 
   Post({
     required this.id,
@@ -228,34 +229,68 @@ class Post {
     this.author,
     this.reactionCounts = const {},
     this.myReactions = const {},
+    this.commentCount = 0,
   });
 
   factory Post.fromMap(Map<String, dynamic> m) => Post(
-        id: m['id'],
-        authorId: m['author_id'],
-        type: m['type'] ?? 'testimony',
-        body: m['body'] ?? '',
-        photoUrl: m['photo_url'],
-        city: m['city'],
-        createdAt: _date(m['created_at']) ?? DateTime.now(),
-        author: m['profiles'] != null
-            ? Profile.fromMap(Map<String, dynamic>.from(m['profiles']))
-            : null,
-      );
+    id: m['id'],
+    authorId: m['author_id'],
+    type: m['type'] ?? 'testimony',
+    body: m['body'] ?? '',
+    photoUrl: m['photo_url'],
+    city: m['city'],
+    createdAt: _date(m['created_at']) ?? DateTime.now(),
+    author: m['profiles'] != null
+        ? Profile.fromMap(Map<String, dynamic>.from(m['profiles']))
+        : null,
+  );
 
-  Post copyWith({Map<String, int>? reactionCounts, Set<String>? myReactions}) =>
-      Post(
-        id: id,
-        authorId: authorId,
-        type: type,
-        body: body,
-        photoUrl: photoUrl,
-        city: city,
-        createdAt: createdAt,
-        author: author,
-        reactionCounts: reactionCounts ?? this.reactionCounts,
-        myReactions: myReactions ?? this.myReactions,
-      );
+  Post copyWith({
+    Map<String, int>? reactionCounts,
+    Set<String>? myReactions,
+    int? commentCount,
+  }) => Post(
+    id: id,
+    authorId: authorId,
+    type: type,
+    body: body,
+    photoUrl: photoUrl,
+    city: city,
+    createdAt: createdAt,
+    author: author,
+    reactionCounts: reactionCounts ?? this.reactionCounts,
+    myReactions: myReactions ?? this.myReactions,
+    commentCount: commentCount ?? this.commentCount,
+  );
+}
+
+class Comment {
+  final String id;
+  final String postId;
+  final String authorId;
+  final String body;
+  final DateTime createdAt;
+  final Profile? author;
+
+  Comment({
+    required this.id,
+    required this.postId,
+    required this.authorId,
+    required this.body,
+    required this.createdAt,
+    this.author,
+  });
+
+  factory Comment.fromMap(Map<String, dynamic> m) => Comment(
+    id: m['id'],
+    postId: m['post_id'],
+    authorId: m['author_id'],
+    body: m['body'] ?? '',
+    createdAt: _date(m['created_at']) ?? DateTime.now(),
+    author: m['profiles'] != null
+        ? Profile.fromMap(Map<String, dynamic>.from(m['profiles']))
+        : null,
+  );
 }
 
 class Achievement {
@@ -278,27 +313,84 @@ class Verse {
   final String text;
   final String reference;
   final String? theme;
-  Verse({required this.id, required this.text, required this.reference, this.theme});
+  Verse({
+    required this.id,
+    required this.text,
+    required this.reference,
+    this.theme,
+  });
   factory Verse.fromMap(Map<String, dynamic> m) => Verse(
-        id: m['id'],
-        text: m['text'],
-        reference: m['reference'],
-        theme: m['theme'],
-      );
+    id: m['id'],
+    text: m['text'],
+    reference: m['reference'],
+    theme: m['theme'],
+  );
 }
 
 class NearbyEvangelist {
   final String userId;
   final String fullName;
   final double distanceM;
+  final double latitude;
+  final double longitude;
   NearbyEvangelist({
     required this.userId,
     required this.fullName,
     required this.distanceM,
+    required this.latitude,
+    required this.longitude,
   });
   factory NearbyEvangelist.fromMap(Map<String, dynamic> m) => NearbyEvangelist(
-        userId: m['user_id'],
-        fullName: m['full_name'] ?? 'Evangelist',
-        distanceM: (m['distance_m'] as num?)?.toDouble() ?? 0,
-      );
+    userId: m['user_id'],
+    fullName: m['full_name'] ?? 'Evangelist',
+    distanceM: (m['distance_m'] as num?)?.toDouble() ?? 0,
+    latitude: (m['approx_lat'] as num?)?.toDouble() ?? 0,
+    longitude: (m['approx_lng'] as num?)?.toDouble() ?? 0,
+  );
 }
+
+class Church {
+  final String id;
+  final String name;
+  final String? city;
+  final String? address;
+  final String? serviceTimes;
+  final String? website;
+  final bool isVerified;
+  final String? claimStatus; // 'unclaimed' | 'pending' | 'approved' | 'rejected'
+  final double? latitude;
+  final double? longitude;
+  final double? distanceM;
+
+  Church({
+    required this.id,
+    required this.name,
+    this.city,
+    this.address,
+    this.serviceTimes,
+    this.website,
+    this.isVerified = false,
+    this.claimStatus,
+    this.latitude,
+    this.longitude,
+    this.distanceM,
+  });
+
+  // Handles rows from the nearby_churches RPC (lat_out/lng_out/distance_m) as
+  // well as plain `churches` table rows.
+  factory Church.fromMap(Map<String, dynamic> m) => Church(
+    id: m['id'].toString(),
+    name: m['name'] ?? 'Church',
+    city: m['city'],
+    address: m['address'],
+    serviceTimes: m['service_times'],
+    website: m['website'],
+    isVerified: m['is_verified'] ?? false,
+    claimStatus: m['claim_status'],
+    latitude: _num(m['lat_out'] ?? m['lat']),
+    longitude: _num(m['lng_out'] ?? m['lng']),
+    distanceM: _num(m['distance_m']),
+  );
+}
+
+double? _num(dynamic v) => v == null ? null : (v as num).toDouble();

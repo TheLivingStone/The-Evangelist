@@ -77,7 +77,7 @@ Emulator is enough, but to test on your own phone:
 
 ## 5. Get the Android build release-ready
 
-- **App icon** — the same `flutter_launcher_icons` setup generates Android icons (incl. adaptive icons) from your one 1024×1024 source.
+- **App icon** — already prepared in `/branding`. The same `flutter_launcher_icons` setup generates Android icons (incl. adaptive icons) using `app_icon_foreground.png` (the padded bolt) over the brand-black background `#0A0A0C`, plus `notification_icon.png` for the status bar. See `/branding/README.md`.
 - **Version** — same `pubspec.yaml` `version: 1.0.0+1` drives both platforms (`versionName` + `versionCode`).
 - **Permission rationale** — Android shows runtime prompts; make sure the app explains *why* before requesting location, camera, and notifications (Play reviewers and users both care).
 - **Privacy policy URL** — the same hosted policy you use for Apple (mandatory, especially with location).

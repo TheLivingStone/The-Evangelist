@@ -31,6 +31,16 @@
 
   <title>the_evangelist</title>
   <link rel="manifest" href="manifest.json">
+
+  <!--
+    Passkeys Web SDK, required by the `passkeys_web` plugin that Clerk
+    (clerk_flutter) depends on. Without it, plugin registration throws during
+    Flutter bootstrap and the app renders a blank screen. Must load BEFORE
+    flutter_bootstrap.js so the global is defined when plugins register.
+    Version (2.4.0) matches what passkeys_web 2.9.0 expects.
+    For production, consider vendoring this file locally instead of the CDN.
+  -->
+  <script src="https://github.com/corbado/flutter-passkeys/releases/download/2.4.0/bundle.js"></script>
 </head>
 <body>
   <!--

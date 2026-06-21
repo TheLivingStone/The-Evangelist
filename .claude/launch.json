@@ -1,0 +1,26 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "admin-dashboard",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "admin",
+      "port": 3100,
+      "autoPort": true
+    },
+    {
+      "name": "flutter-app-web",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": [
+        "run",
+        "-d",
+        "web-server",
+        "--web-port",
+        "8080"
+      ],
+      "cwd": "app",
+      "port": 8080
+    }
+  ]
+}

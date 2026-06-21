@@ -112,7 +112,7 @@ Use this loop to feel the real app on a device before you spend anything on Appl
 Before Apple will accept it, the app needs these. The AI can help with each:
 
 - **App name & bundle ID** — e.g. name "The Evangelist", bundle ID like `com.yourname.theevangelist` (must be unique and permanent).
-- **App icon** — a 1024×1024 icon plus all sizes. Use the `flutter_launcher_icons` package to generate them from one image.
+- **App icon** — already prepared. Use `/branding/app_icon.png` (1024×1024, no transparency) as the iOS master and run `flutter_launcher_icons` per `/branding/README.md`; it generates every size. The Evangelist bolt becomes your home-screen icon.
 - **Version & build number** — set in `pubspec.yaml` (e.g. `1.0.0+1`).
 - **Permission strings** (in `ios/Runner/Info.plist`) — Apple **rejects** apps that ask for access without a clear reason. You need:
   - Location ("Show you on the live map and find evangelists and churches nearby.")

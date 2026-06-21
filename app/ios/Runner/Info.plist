@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Your location centers the nearby evangelism map and is only shared during an active outreach when map visibility is enabled.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Select a photo to attach to your testimony or outreach post.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

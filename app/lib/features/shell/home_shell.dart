@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
+import '../../core/providers.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../community/community_screen.dart';
 import '../map/map_screen.dart';
@@ -15,6 +18,8 @@ class HomeShell extends ConsumerStatefulWidget {
 
 class _HomeShellState extends ConsumerState<HomeShell> {
   int _index = 0;
+  final _loadedTabs = <int>{0};
+  Timer? _prefetchTimer;
 
   static const _screens = [
     DashboardScreen(),
@@ -23,6 +28,23 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     MapScreen(),
     ProfileScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Let the dashboard paint first, then warm only the shared feed data. Avoid
+    // constructing three offstage screens and all their network requests.
+    _prefetchTimer = Timer(const Duration(milliseconds: 500), () {
+      if (!mounted) return;
+      ref.read(allFeedProvider.future).ignore();
+    });
+  }
+
+  @override
+  void dispose() {
+    _prefetchTimer?.cancel();
+    super.dispose();
+  }
 
   void _openStart() {
     showModalBottomSheet(
@@ -38,7 +60,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     return Scaffold(
       body: IndexedStack(
         index: _index,
-        children: _screens,
+        children: List.generate(
+          _screens.length,
+          (i) => _loadedTabs.contains(i)
+              ? RepaintBoundary(child: _screens[i])
+              : const SizedBox.shrink(),
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _openStart,
@@ -47,11 +74,14 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         shape: const CircleBorder(),
         child: const Icon(Icons.add, color: Colors.white, size: 32),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      // Drop the button down so it sits level with the nav icons rather than
+      // floating high over the notch. _DockedDown nudges the standard docked
+      // anchor downward; pair it with a small notchMargin below.
+      floatingActionButtonLocation: const _DockedDown(),
       bottomNavigationBar: BottomAppBar(
         height: 64,
         shape: const CircularNotchedRectangle(),
-        notchMargin: 8,
+        notchMargin: 5,
         color: Theme.of(context).colorScheme.surface,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -73,18 +103,48 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         ? AppColors.accent
         : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
     return InkWell(
-      onTap: () => setState(() => _index = i),
+      onTap: () => setState(() {
+        _index = i;
+        _loadedTabs.add(i);
+      }),
       borderRadius: BorderRadius.circular(12),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(selected ? active : icon, color: color, size: 24),
-            Text(label, style: TextStyle(color: color, fontSize: 10)),
+            Icon(selected ? active : icon, color: color, size: 22),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(color: color, fontSize: 10, height: 1.0),
+            ),
           ],
         ),
       ),
     );
+  }
+}
+
+/// Centre-docked FAB nudged downward so it rests level with the bottom-nav
+/// icons instead of floating high over the notch. Delegates horizontal centring
+/// to the standard docked location and only shifts the vertical anchor down.
+class _DockedDown extends FloatingActionButtonLocation {
+  const _DockedDown();
+
+  /// How far below the standard docked position to drop the button.
+  static const double _dropY = 18;
+
+  @override
+  Offset getOffset(ScaffoldPrelayoutGeometry scaffoldGeometry) {
+    final base = FloatingActionButtonLocation.centerDocked.getOffset(
+      scaffoldGeometry,
+    );
+    // Clamp so the button can never sink below the screen on short bars.
+    final maxY =
+        scaffoldGeometry.scaffoldSize.height -
+        scaffoldGeometry.floatingActionButtonSize.height;
+    return Offset(base.dx, (base.dy + _dropY).clamp(0.0, maxY));
   }
 }
