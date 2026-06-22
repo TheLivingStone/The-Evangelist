@@ -315,3 +315,316 @@ td.muted,
   text-align: center;
   color: var(--muted);
 }
+
+/* ===========================================================================
+   Analytics dashboard — panels, KPI cards, charts, toggles, map, etc.
+   =========================================================================== */
+
+.main {
+  max-width: 1320px;
+}
+
+/* Page header row (title + period toggle on the right) */
+.page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+.page-head h1 {
+  margin-bottom: 4px;
+}
+.page-head .subtitle {
+  margin: 0;
+}
+
+/* KPI cards: tighter grid, room for spark + delta */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.card.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 16px 10px;
+}
+.kpi .value {
+  font-size: 28px;
+  margin-top: 4px;
+}
+.kpi-foot {
+  min-height: 18px;
+  margin-top: 2px;
+}
+.kpi-spark {
+  margin: 4px -8px -6px;
+}
+
+/* Panels: framed chart/table sections, responsive grid */
+.panels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+@media (max-width: 900px) {
+  .panels {
+    grid-template-columns: 1fr;
+  }
+}
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  min-width: 0;
+}
+.panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.panel-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+}
+.panel-sub {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 2px 0 0;
+}
+.panel-right {
+  flex-shrink: 0;
+}
+
+/* Segmented toggle */
+.segmented {
+  display: inline-flex;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 3px;
+  gap: 2px;
+}
+.seg {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 12px;
+  padding: 5px 11px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.seg:hover {
+  color: var(--text);
+}
+.seg.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* Avatars (leaderboard) */
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface2);
+  color: var(--accent2);
+  font-weight: 800;
+  font-size: 13px;
+}
+
+/* Banners (migration not applied / errors) */
+.banner {
+  background: rgba(255, 107, 0, 0.1);
+  border: 1px solid rgba(255, 107, 0, 0.35);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.banner code {
+  background: var(--surface2);
+  padding: 1px 6px;
+  border-radius: 5px;
+  font-size: 12px;
+  color: var(--accent2);
+}
+.banner-error {
+  background: rgba(229, 72, 77, 0.1);
+  border-color: rgba(229, 72, 77, 0.35);
+}
+
+/* Live "now" badge */
+.live-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--green);
+  margin-right: 6px;
+  box-shadow: 0 0 0 0 rgba(52, 209, 126, 0.6);
+  animation: pulse 1.8s infinite;
+}
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(52, 209, 126, 0.5); }
+  70% { box-shadow: 0 0 0 7px rgba(52, 209, 126, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(52, 209, 126, 0); }
+}
+
+/* Pulse feed (recent events) */
+.pulse {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.pulse-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+.pulse-item:last-child {
+  border-bottom: none;
+}
+.pulse-ico {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface2);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.pulse-body {
+  flex: 1;
+  font-size: 13px;
+  min-width: 0;
+}
+.pulse-time {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* Filter bar (users/posts/churches upgraded pages) */
+.filterbar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.filterbar input,
+.filterbar select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 9px;
+  padding: 8px 11px;
+  font-size: 13px;
+}
+.filterbar input {
+  min-width: 220px;
+}
+.filterbar input::placeholder {
+  color: var(--muted);
+}
+
+/* Map */
+.mapwrap {
+  position: relative;
+  height: 560px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.maplibregl-popup-content {
+  background: var(--surface2) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border);
+  border-radius: 10px !important;
+  font-size: 12px;
+  font-family: inherit;
+}
+.maplibregl-popup-tip {
+  border-top-color: var(--surface2) !important;
+}
+.map-layers {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 5;
+  background: rgba(21, 21, 26, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  backdrop-filter: blur(8px);
+}
+.map-layers label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.map-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+/* Big number row inside panels (impact counters) */
+.bignums {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 14px;
+}
+.bignum .n {
+  font-size: 26px;
+  font-weight: 800;
+}
+.bignum .l {
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-top: 2px;
+}
+
+/* Span helpers */
+.span-2 {
+  grid-column: span 2;
+}
+@media (max-width: 900px) {
+  .span-2 {
+    grid-column: span 1;
+  }
+}

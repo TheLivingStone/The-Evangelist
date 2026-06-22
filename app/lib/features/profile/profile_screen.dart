@@ -1,8 +1,8 @@
-import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/env.dart';
 import '../../core/providers.dart';
+import '../../core/supabase.dart';
 import '../../core/theme.dart';
 import '../../models/models.dart';
 
@@ -21,10 +21,9 @@ class ProfileScreen extends ConsumerWidget {
             ? [
                 IconButton(
                   icon: const Icon(Icons.logout),
-                  // Identity is owned by Clerk; sign out there. The ClerkAuthBuilder
-                  // gate in main.dart then swaps back to the sign-in screen.
-                  onPressed: () async =>
-                      ClerkAuth.of(context, listen: false).signOut(),
+                  // Sign out of Supabase Auth. The auth gate in main.dart reacts
+                  // to the state change and swaps back to the sign-in screen.
+                  onPressed: () async => supabase.auth.signOut(),
                 ),
               ]
             : null,

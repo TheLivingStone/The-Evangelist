@@ -1,60 +1,56 @@
 import { getUsers } from "@/lib/data";
-import { fmtDate } from "@/lib/format";
+import { safe, getSignupsByCity, getPlatformSplit } from "@/lib/analytics";
+import KpiCard from "@/components/KpiCard";
+import Panel from "@/components/Panel";
+import UsersTable from "./UsersTable";
+import { Bars, Donut } from "@/components/charts/Charts";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function UsersPage() {
-  const users = await getUsers();
+  const [users, cityR, platR] = await Promise.all([
+    getUsers(500),
+    safe(() => getSignupsByCity(3650, 12)), // all-time top cities
+    safe(getPlatformSplit),
+  ]);
+
+  const active = users.filter(
+    (u) => u.total_conversations + u.total_salvations + u.total_followups > 0,
+  ).length;
+  const onStreak = users.filter((u) => u.current_streak > 0).length;
+
   return (
     <>
-      <h1>Users</h1>
-      <p className="subtitle">
-        {users.length} most recent profiles. Stats are each user&apos;s lifetime
-        totals.
-      </p>
-
-      <div className="tablewrap">
-        {users.length === 0 ? (
-          <div className="empty">No users yet.</div>
-        ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>City</th>
-                <th>Church</th>
-                <th>Streak</th>
-                <th>Convos</th>
-                <th>Salvations</th>
-                <th>Joined</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u) => (
-                <tr key={u.id}>
-                  <td>
-                    <div style={{ fontWeight: 600 }}>{u.full_name}</div>
-                    {u.username ? (
-                      <div className="muted" style={{ fontSize: 12 }}>
-                        @{u.username}
-                      </div>
-                    ) : null}
-                  </td>
-                  <td className="muted">{u.city || "—"}</td>
-                  <td className="muted">{u.church || "—"}</td>
-                  <td>
-                    {u.current_streak}
-                    <span className="muted"> / {u.longest_streak}</span>
-                  </td>
-                  <td>{u.total_conversations}</td>
-                  <td>{u.total_salvations}</td>
-                  <td className="muted">{fmtDate(u.created_at)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+      <div className="page-head">
+        <div>
+          <h1>Users</h1>
+          <p className="subtitle">
+            {users.length} most recent profiles · search &amp; filter below.
+          </p>
+        </div>
       </div>
+
+      <div className="kpis">
+        <KpiCard label="Loaded users" value={users.length} accent />
+        <KpiCard label="With activity" value={active} hint={`${users.length - active} dormant`} />
+        <KpiCard label="On a streak" value={onStreak} />
+      </div>
+
+      <div className="panels">
+        <Panel title="Users by city" subtitle="Top cities" span={1}>
+          {cityR.data ? <Bars data={cityR.data} horizontal height={Math.max(200, (cityR.data.length || 1) * 28)} /> : <Empty />}
+        </Panel>
+        <Panel title="Platform" subtitle="Registered devices" span={1}>
+          {platR.data ? <Donut data={platR.data} /> : <Empty />}
+        </Panel>
+      </div>
+
+      <UsersTable users={users} />
     </>
   );
+}
+
+function Empty() {
+  return <div className="empty">No data yet.</div>;
 }

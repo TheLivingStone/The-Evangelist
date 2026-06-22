@@ -394,3 +394,74 @@ class Church {
 }
 
 double? _num(dynamic v) => v == null ? null : (v as num).toDouble();
+
+/// The current user's home-church membership (from my_church_membership RPC).
+class ChurchMembership {
+  final String membershipId;
+  final String churchId;
+  final String churchName;
+  final String? city;
+  final bool isVerified;
+  final String status; // 'pending' | 'confirmed'
+
+  ChurchMembership({
+    required this.membershipId,
+    required this.churchId,
+    required this.churchName,
+    this.city,
+    this.isVerified = false,
+    required this.status,
+  });
+
+  bool get isConfirmed => status == 'confirmed';
+  bool get isPending => status == 'pending';
+
+  factory ChurchMembership.fromMap(Map<String, dynamic> m) => ChurchMembership(
+    membershipId: m['membership_id'].toString(),
+    churchId: m['church_id'].toString(),
+    churchName: m['church_name'] ?? 'Church',
+    city: m['city'],
+    isVerified: m['is_verified'] ?? false,
+    status: m['status'] ?? 'pending',
+  );
+}
+
+/// A pending/confirmed member shown to a church manager (church_member_requests).
+class ChurchMemberRequest {
+  final String membershipId;
+  final String memberId;
+  final String? fullName;
+  final String? username;
+  final String? city;
+  final String? avatarUrl;
+  final String status;
+  final int totalSalvations;
+  final int totalConversations;
+
+  ChurchMemberRequest({
+    required this.membershipId,
+    required this.memberId,
+    this.fullName,
+    this.username,
+    this.city,
+    this.avatarUrl,
+    required this.status,
+    this.totalSalvations = 0,
+    this.totalConversations = 0,
+  });
+
+  bool get isPending => status == 'pending';
+
+  factory ChurchMemberRequest.fromMap(Map<String, dynamic> m) =>
+      ChurchMemberRequest(
+        membershipId: m['membership_id'].toString(),
+        memberId: m['member_id'].toString(),
+        fullName: m['full_name'],
+        username: m['username'],
+        city: m['city'],
+        avatarUrl: m['avatar_url'],
+        status: m['status'] ?? 'pending',
+        totalSalvations: (m['total_salvations'] as num?)?.toInt() ?? 0,
+        totalConversations: (m['total_conversations'] as num?)?.toInt() ?? 0,
+      );
+}

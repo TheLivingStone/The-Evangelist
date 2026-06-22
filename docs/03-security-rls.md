@@ -51,6 +51,20 @@ The same `security definer` pattern powers `nearby_churches()` and `area_stats()
 - **Email verification / password reset:** use Supabase's built-in flows; customise templates with The Evangelist branding.
 - **Deep links:** configure the app's redirect URL scheme for OAuth and magic-link callbacks.
 
+### Implementation status & history (as of 2026-06-21)
+
+The app uses **Supabase Auth**, matching this spec and the live database (`profiles.id` and all user-id columns are `uuid`; RLS uses `auth.uid()`).
+
+> **Historical note — the Clerk detour.** The Flutter code was briefly migrated to **Clerk** (text user ids, `auth.jwt()->>'sub'`), but the **live database was never changed** — it stayed Supabase Auth. That mismatch broke writes the moment the backend was enabled. The code was reverted to Supabase Auth on 2026-06-21 to match the DB. **Do not reintroduce Clerk** without also migrating every `*_id` column to `text` and rewriting all 41 RLS policies. The old `clerk-supabase-integration` notes are historical only.
+
+Key facts the spec doesn't state:
+- **Profiles are created DB-side, not by the app.** The `handle_new_user` trigger inserts the row; `profiles` has **no INSERT policy** (only SELECT + UPDATE). The app's `ProfileRepo.ensure()` only *reads* the trigger-created row. Never add a client-side `profiles` insert.
+- **Display name flow:** the auth screen calls `signUp(data: {'full_name': ...})` → lands in `raw_user_meta_data` → the trigger copies it to `profiles.full_name`.
+- **Live gotchas to finish before public launch:**
+  - **Email confirmation is currently ON** — new signups must confirm by email before login. Turn OFF in the dashboard (Auth → Providers → Email → "Confirm email") for frictionless testing, re-enable for production as desired.
+  - **Google sign-in** has a working button in the app but requires a Google OAuth client to be configured in Supabase (Auth → Providers → Google) before it functions; until then it fails gracefully. **Apple Sign-In** is still TODO and is required by App Store review.
+  - App config: `BACKEND_ENABLED=true` in `app/.env` connects the app to live Supabase + Auth (vs. in-memory demo mode).
+
 ## Storage security (Supabase Storage)
 
 Three buckets, each with policies:

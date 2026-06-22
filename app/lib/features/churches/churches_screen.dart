@@ -6,6 +6,7 @@ import '../../core/theme.dart';
 import '../../models/models.dart';
 import 'register_church_screen.dart';
 import 'claim_church_screen.dart';
+import 'manage_members_screen.dart';
 
 /// Public church directory. Lists churches near the user's location and lets
 /// them register a new one or claim an existing listing. Verified churches are
@@ -108,10 +109,11 @@ class _ChurchesScreenState extends ConsumerState<ChurchesScreen> {
                   )
                 : ListView.builder(
                     padding: const EdgeInsets.all(12),
-                    itemCount: churches.length + 1,
+                    itemCount: churches.length + 2,
                     itemBuilder: (_, i) {
                       if (i == 0) return const _DirectoryNote();
-                      return _ChurchCard(church: churches[i - 1]);
+                      if (i == 1) return const _MembershipBanner();
+                      return _ChurchCard(church: churches[i - 2]);
                     },
                   ),
           );
@@ -194,33 +196,192 @@ class _ChurchCard extends ConsumerWidget {
               ),
             ],
             const SizedBox(height: 10),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                onPressed: () async {
-                  final done = await Navigator.push<bool>(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ClaimChurchScreen(church: church),
-                    ),
-                  );
-                  if (done == true && context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Claim submitted — our team will reach out to verify.',
-                        ),
-                      ),
-                    );
-                  }
-                },
-                icon: const Icon(Icons.verified_user_outlined, size: 18),
-                label: Text(
-                  church.isVerified
-                      ? 'This is my church'
-                      : 'Claim / I lead this church',
+            _CardActions(church: church),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Action row on each church card: the member "I attend here" button (reflecting
+/// current membership state), the pastor "claim / lead" button, and — for the
+/// manager of this church — a shortcut to confirm members.
+class _CardActions extends ConsumerWidget {
+  final Church church;
+  const _CardActions({required this.church});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final membership = ref.watch(myMembershipProvider).value;
+    final attendsThis = membership != null && membership.churchId == church.id;
+
+    Future<void> attend() async {
+      try {
+        await ref.read(churchesRepoProvider).joinChurch(church.id);
+        ref.invalidate(myMembershipProvider);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Marked as your church — the church will confirm you. 🙏',
+              ),
+            ),
+          );
+        }
+      } catch (error) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not join: $error')),
+          );
+        }
+      }
+    }
+
+    Future<void> leave() async {
+      try {
+        await ref.read(churchesRepoProvider).leaveChurch();
+        ref.invalidate(myMembershipProvider);
+      } catch (_) {}
+    }
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        if (attendsThis)
+          _AttendChip(
+            confirmed: membership.isConfirmed,
+            onLeave: leave,
+          )
+        else
+          TextButton.icon(
+            style: TextButton.styleFrom(padding: EdgeInsets.zero),
+            onPressed: attend,
+            icon: const Icon(Icons.favorite_outline, size: 18),
+            label: const Text('I attend here'),
+          ),
+        TextButton.icon(
+          style: TextButton.styleFrom(padding: EdgeInsets.zero),
+          onPressed: () async {
+            final done = await Navigator.push<bool>(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ClaimChurchScreen(church: church),
+              ),
+            );
+            if (done == true && context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Claim submitted — our team will reach out to verify.',
+                  ),
                 ),
+              );
+            }
+          },
+          icon: const Icon(Icons.verified_user_outlined, size: 18),
+          label: const Text('I lead this church'),
+        ),
+        TextButton.icon(
+          style: TextButton.styleFrom(padding: EdgeInsets.zero),
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ManageMembersScreen(church: church),
+            ),
+          ),
+          icon: const Icon(Icons.group_outlined, size: 18),
+          label: const Text('Members'),
+        ),
+      ],
+    );
+  }
+}
+
+class _AttendChip extends StatelessWidget {
+  final bool confirmed;
+  final VoidCallback onLeave;
+  const _AttendChip({required this.confirmed, required this.onLeave});
+  @override
+  Widget build(BuildContext context) {
+    final color = confirmed ? AppColors.green : AppColors.accent;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                confirmed ? Icons.check_circle : Icons.hourglass_top,
+                size: 14,
+                color: color,
+              ),
+              const SizedBox(width: 5),
+              Text(
+                confirmed ? 'Your church' : 'Pending confirmation',
+                style: TextStyle(
+                  color: color,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+        TextButton(
+          onPressed: onLeave,
+          child: const Text('Leave', style: TextStyle(fontSize: 12)),
+        ),
+      ],
+    );
+  }
+}
+
+/// Top-of-list banner summarising the user's home-church status.
+class _MembershipBanner extends ConsumerWidget {
+  const _MembershipBanner();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final m = ref.watch(myMembershipProvider).value;
+    if (m == null) return const SizedBox.shrink();
+    final color = m.isConfirmed ? AppColors.green : AppColors.accent;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            Icon(Icons.church_outlined, color: color),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    m.isConfirmed
+                        ? 'You attend ${m.churchName}'
+                        : 'Waiting on ${m.churchName} to confirm you',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  Text(
+                    m.isConfirmed
+                        ? 'Your evangelism counts toward your church. 🔥'
+                        : 'Once confirmed, your activity counts toward your church.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.65),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

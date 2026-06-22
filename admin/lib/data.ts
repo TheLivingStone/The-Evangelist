@@ -1,5 +1,6 @@
 import "server-only";
 import { supabaseAdmin } from "./supabaseAdmin";
+import { truncate } from "./format";
 
 // Read/aggregate helpers for the dashboard. All run server-side with the
 // service-role client, so they see across every user (RLS bypassed).
@@ -150,6 +151,69 @@ export async function getPosts(limit = 200): Promise<PostRow[]> {
     .limit(limit);
   if (error) throw new Error(`getPosts: ${error.message}`);
   return (data ?? []) as unknown as PostRow[];
+}
+
+export type PulseItem = {
+  kind: "signup" | "post" | "church" | "salvation";
+  label: string;
+  detail: string | null;
+  at: string;
+};
+
+// A merged "recent activity" feed for the Overview pulse column. Reads the
+// newest rows from a few tables and interleaves them by time. Small limits keep
+// it cheap.
+export async function getRecentPulse(limit = 12): Promise<PulseItem[]> {
+  const sb = supabaseAdmin();
+  const [signups, posts, churches] = await Promise.all([
+    sb
+      .from("profiles")
+      .select("full_name,city,created_at")
+      .order("created_at", { ascending: false })
+      .limit(limit),
+    sb
+      .from("posts")
+      .select("type,body,created_at,profiles!posts_author_id_fkey(full_name)")
+      .order("created_at", { ascending: false })
+      .limit(limit),
+    sb
+      .from("churches")
+      .select("name,city,created_at")
+      .order("created_at", { ascending: false })
+      .limit(limit),
+  ]);
+
+  const items: PulseItem[] = [];
+  for (const r of signups.data ?? []) {
+    items.push({
+      kind: "signup",
+      label: `${(r as any).full_name || "Someone"} joined`,
+      detail: (r as any).city || null,
+      at: (r as any).created_at,
+    });
+  }
+  for (const r of posts.data ?? []) {
+    const author = (r as any).profiles?.full_name || "Someone";
+    const isSalv = (r as any).type === "salvation";
+    items.push({
+      kind: isSalv ? "salvation" : "post",
+      label: isSalv ? `${author} recorded a salvation` : `${author} posted a ${(r as any).type}`,
+      detail: truncate((r as any).body, 60) || null,
+      at: (r as any).created_at,
+    });
+  }
+  for (const r of churches.data ?? []) {
+    items.push({
+      kind: "church",
+      label: `${(r as any).name} registered`,
+      detail: (r as any).city || null,
+      at: (r as any).created_at,
+    });
+  }
+  return items
+    .filter((i) => i.at)
+    .sort((a, b) => (a.at < b.at ? 1 : -1))
+    .slice(0, limit);
 }
 
 export async function getChurches(limit = 200): Promise<ChurchRow[]> {

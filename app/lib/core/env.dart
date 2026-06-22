@@ -8,8 +8,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 /// and run with a plain `flutter run` — no --dart-define flags required —
 /// while still allowing per-environment overrides via --dart-define in CI.
 ///
-/// ONLY public, client-safe values live here. The Clerk SECRET key must never
-/// be bundled or referenced in client code.
+/// ONLY public, client-safe values live here. Service-role / secret keys must
+/// never be bundled or referenced in client code.
 class Env {
   /// Reads [key] from --dart-define first, then .env, then [fallback].
   ///
@@ -26,15 +26,13 @@ class Env {
   static const _supabaseAnonKeyDefine = String.fromEnvironment(
     'SUPABASE_ANON_KEY',
   );
-  static const _clerkPublishableKeyDefine = String.fromEnvironment(
-    'CLERK_PUBLISHABLE_KEY',
-  );
   static const _googleMapsApiKeyDefine = String.fromEnvironment(
     'GOOGLE_MAPS_API_KEY',
   );
   static const _backendEnabledDefine = String.fromEnvironment(
     'BACKEND_ENABLED',
   );
+  static const _signupSourceDefine = String.fromEnvironment('SIGNUP_SOURCE');
 
   /// Local development is the default while the product UI is being built.
   static bool get backendEnabled =>
@@ -53,13 +51,14 @@ class Env {
     'sb_publishable_EWal_Z9h6dZxbTFbul_R7w_56v6Si0o',
   );
 
-  /// Clerk publishable key (pk_test_... / pk_live_...). Clerk is the identity
-  /// provider; its session JWT is forwarded to Supabase. No safe default —
-  /// the app shows a config error until this is supplied.
-  static String get clerkPublishableKey =>
-      _read('CLERK_PUBLISHABLE_KEY', _clerkPublishableKeyDefine, '');
-
   /// Optional — only needed when the native Google Map is wired up.
   static String get googleMapsApiKey =>
       _read('GOOGLE_MAPS_API_KEY', _googleMapsApiKeyDefine, '');
+
+  /// Acquisition channel recorded on a user's FIRST sign-in, powering the admin
+  /// Growth dashboard's per-campaign breakdown. Ship a campaign build with
+  /// `--dart-define=SIGNUP_SOURCE=instagram_ad` (or set SIGNUP_SOURCE in .env)
+  /// so installs from that campaign are attributed. Defaults to 'organic'.
+  static String get signupSource =>
+      _read('SIGNUP_SOURCE', _signupSourceDefine, 'organic');
 }

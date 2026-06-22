@@ -98,26 +98,25 @@ class ProfileRepo {
     return row == null ? null : Profile.fromMap(row);
   }
 
-  /// Ensure a profiles row exists for the current Clerk user, creating it on
-  /// first sign-in. Identity is owned by Clerk, so there is no DB trigger to
-  /// create this row (the old auth.users trigger is gone). Returns the profile.
+  /// Return the current user's profile row, which the database creates for us.
   ///
-  /// [fullName] comes from the Clerk user; it only seeds a brand-new row and
-  /// never overwrites a name the user has since edited.
-  Future<Profile> ensure({required String fullName}) async {
+  /// Identity is Supabase Auth. A SECURITY DEFINER trigger (handle_new_user on
+  /// auth.users) inserts the profiles row at signup, copying full_name +
+  /// username from the user's metadata (set via signUp(data: {...}) on the auth
+  /// screen). The app therefore never inserts profiles itself — there is no
+  /// INSERT policy — it just reads the trigger-created row here.
+  ///
+  /// The trigger runs inside the signup transaction, so the row normally exists
+  /// the moment the client has a session. We still retry a few times to cover
+  /// any replication lag before surfacing a clear error.
+  Future<Profile> ensure() async {
     if (!Env.backendEnabled) return _LocalStore.profile;
-    final uid = currentUserId!;
-    final existing = await me();
-    if (existing != null) return existing;
-    final row = await supabase
-        .from('profiles')
-        .insert({
-          'id': uid,
-          'full_name': fullName.trim().isEmpty ? 'Evangelist' : fullName.trim(),
-        })
-        .select()
-        .single();
-    return Profile.fromMap(row);
+    for (var attempt = 0; attempt < 3; attempt++) {
+      final existing = await me();
+      if (existing != null) return existing;
+      await Future.delayed(const Duration(milliseconds: 350));
+    }
+    throw StateError('Your profile is still being set up. Please try again.');
   }
 
   Future<Profile> byId(String id) async {
@@ -787,6 +786,56 @@ class ChurchesRepo {
         'p_message': message,
       },
     );
+  }
+
+  // ---- Church membership (members ↔ churches) ------------------------------
+
+  /// The current user marks a directory church as their home church. Creates a
+  /// PENDING membership the church manager then confirms. One home church only.
+  Future<void> joinChurch(String churchId) async {
+    if (!Env.backendEnabled) return;
+    await supabase.rpc('join_church', params: {'p_church_id': churchId});
+  }
+
+  /// Leave the current home church.
+  Future<void> leaveChurch() async {
+    if (!Env.backendEnabled) return;
+    await supabase.rpc('leave_church');
+  }
+
+  /// What church (if any) the current user belongs to, and whether it's
+  /// confirmed yet. Null when they haven't joined one.
+  Future<ChurchMembership?> myMembership() async {
+    if (!Env.backendEnabled) return null;
+    final rows = await supabase.rpc('my_church_membership');
+    final list = (rows as List?) ?? const [];
+    if (list.isEmpty) return null;
+    return ChurchMembership.fromMap(Map<String, dynamic>.from(list.first));
+  }
+
+  /// Members (pending first) for a church the current user MANAGES. Empty if
+  /// the caller isn't the church's claimant.
+  Future<List<ChurchMemberRequest>> memberRequests(String churchId) async {
+    if (!Env.backendEnabled) return const [];
+    final rows = await supabase.rpc(
+      'church_member_requests',
+      params: {'p_church_id': churchId},
+    );
+    return ((rows as List?) ?? const [])
+        .map((e) => ChurchMemberRequest.fromMap(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
+  /// Church manager confirms a pending member.
+  Future<void> confirmMember(String membershipId) async {
+    if (!Env.backendEnabled) return;
+    await supabase.rpc('confirm_member', params: {'p_membership_id': membershipId});
+  }
+
+  /// Church manager removes a member.
+  Future<void> removeMember(String membershipId) async {
+    if (!Env.backendEnabled) return;
+    await supabase.rpc('remove_member', params: {'p_membership_id': membershipId});
   }
 }
 

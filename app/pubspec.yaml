@@ -39,19 +39,8 @@ dependencies:
   go_router: ^17.3.0
   intl: ^0.20.2
   # Loads the bundled .env asset at runtime so config lives in one place (see
-  # lib/core/env.dart). Only PUBLIC keys are bundled — never the Clerk secret.
+  # lib/core/env.dart). Only PUBLIC, client-safe keys are bundled.
   flutter_dotenv: ^6.0.1
-  # Backs the web Clerk token persistor (lib/core/clerk_web_persistor.dart):
-  # Clerk's default persistor uses path_provider, which has no web support.
-  shared_preferences: ^2.3.2
-  # Clerk owns identity (iOS/Android/web). The Clerk session JWT is forwarded
-  # to Supabase via Supabase.initialize(accessToken:) — see lib/core/supabase.dart.
-  # Pre-1.0 beta: pin within the 0.0.x line to avoid surprise breaking jumps.
-  clerk_flutter: '>=0.0.16-beta <0.1.0'
-  # The pure-Dart core (User, SessionToken, ClerkError models). Declared
-  # explicitly because lib/core/supabase.dart imports it directly.
-  # Same beta line that clerk_flutter depends on, to keep resolution aligned.
-  clerk_auth: '>=0.0.16-beta <0.1.0'
   flutter_map: ^8.3.0
   latlong2: ^0.9.1
   geolocator: ^13.0.4

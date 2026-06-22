@@ -5,8 +5,11 @@ import { usePathname } from "next/navigation";
 
 const LINKS = [
   { href: "/", label: "Overview" },
+  { href: "/growth", label: "Growth & Acquisition" },
+  { href: "/map", label: "Map" },
+  { href: "/impact", label: "Kingdom Impact" },
+  { href: "/community", label: "Community" },
   { href: "/users", label: "Users" },
-  { href: "/posts", label: "Posts" },
   { href: "/churches", label: "Churches" },
 ];
 

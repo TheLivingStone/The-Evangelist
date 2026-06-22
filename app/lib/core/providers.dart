@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/models.dart';
 import '../repositories/repositories.dart';
 import 'env.dart';
@@ -17,20 +18,40 @@ final churchesRepoProvider = Provider((_) => ChurchesRepo());
 final achievementsRepoProvider = Provider((_) => AchievementsRepo());
 final encouragementRepoProvider = Provider((_) => EncouragementRepo());
 
-// Auth-change signal. Identity is owned by Clerk; the _ClerkBridge in main.dart
-// invalidates this whenever Clerk's signed-in user changes. Per-user providers
-// watch it so cached data is dropped on sign in/out. The value is irrelevant —
-// only the invalidation matters.
-final authChangedProvider = Provider<Object>((ref) => Object());
+// Raw Supabase auth event stream. The underlying BehaviorSubject replays the
+// latest state to new listeners, so late subscribers (and the cold-start gate)
+// immediately see the current session.
+final authStateProvider = StreamProvider<AuthState>((ref) {
+  return supabase.auth.onAuthStateChange;
+});
 
-// Current profile. In backend mode this also performs the one-time ensure, so
-// the signed-in gate and dashboard share one cached request.
+// The signed-in user's id (uuid), or null. Derived from the auth stream, with a
+// synchronous fallback so there is no null flash on the first frame.
+final currentUserIdProvider = Provider<String?>((ref) {
+  ref.watch(authStateProvider);
+  return supabase.auth.currentUser?.id;
+});
+
+// Auth-change signal: per-user providers watch this so cached data drops when
+// the user changes. It DERIVES from the user id, so it changes only on sign in
+// / out / account switch — token refreshes (same id) cause no churn. No manual
+// invalidation needed anywhere.
+final authChangedProvider = Provider<Object>((ref) {
+  return ref.watch(currentUserIdProvider) ?? const _SignedOut();
+});
+
+class _SignedOut {
+  const _SignedOut();
+}
+
+// Current profile. The profiles row is created DB-side by the handle_new_user
+// trigger on signup; ensure() just reads it (see ProfileRepo.ensure).
 final myProfileProvider = FutureProvider<Profile?>((ref) async {
   ref.watch(authChangedProvider);
   final repo = ref.read(profileRepoProvider);
   if (!Env.backendEnabled) return repo.me();
   if (currentUserId == null) return null;
-  return repo.ensure(fullName: clerkAuth?.user?.name ?? '');
+  return repo.ensure();
 });
 
 final ensureProfileProvider = FutureProvider<Profile>((ref) async {
@@ -123,4 +144,17 @@ final commentsProvider = FutureProvider.family<List<Comment>, String>((
 final achievementsProvider = FutureProvider<List<Achievement>>((ref) {
   ref.watch(authChangedProvider);
   return ref.read(achievementsRepoProvider).all();
+});
+
+// The current user's home-church membership (null if they haven't joined one).
+final myMembershipProvider = FutureProvider<ChurchMembership?>((ref) {
+  ref.watch(authChangedProvider);
+  return ref.read(churchesRepoProvider).myMembership();
+});
+
+// Members (pending first) of a church the current user manages.
+final churchMembersProvider =
+    FutureProvider.family<List<ChurchMemberRequest>, String>((ref, churchId) {
+  ref.watch(authChangedProvider);
+  return ref.read(churchesRepoProvider).memberRequests(churchId);
 });
