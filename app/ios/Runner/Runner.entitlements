@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Sign in with Apple. Required by App Store Review Guideline 4.8 because
+	     the app also offers Google sign-in. Enable the matching capability on the
+	     App ID in the Apple Developer portal (and in Xcode → Signing &
+	     Capabilities) so this entitlement is honored. -->
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
+</dict>
+</plist>

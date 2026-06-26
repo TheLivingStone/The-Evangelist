@@ -135,6 +135,28 @@ class ProfileRepo {
     }
     await supabase.from('profiles').update(patch).eq('id', currentUserId!);
   }
+
+  /// Permanently delete the signed-in user's account and all their data.
+  ///
+  /// Calls the `delete-account` Edge Function, which verifies the caller's JWT
+  /// and deletes their auth.users row server-side (the service-role key never
+  /// touches the client). Every table cascades from auth.users, so all of the
+  /// user's data goes with it. After this returns, the caller must sign out.
+  ///
+  /// Required by Apple App Store Guideline 5.1.1(v).
+  Future<void> deleteAccount() async {
+    if (!Env.backendEnabled) {
+      _LocalStore.reset();
+      return;
+    }
+    final res = await supabase.functions.invoke('delete-account');
+    // supabase_flutter throws FunctionException on non-2xx, so reaching here is
+    // success. Defensively surface an explicit error payload if one came back.
+    final data = res.data;
+    if (data is Map && data['error'] != null) {
+      throw Exception(data['error'].toString());
+    }
+  }
 }
 
 class ActivityRepo {

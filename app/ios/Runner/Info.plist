@@ -4,6 +4,11 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<!-- Export compliance: the app uses only standard HTTPS/TLS (exempt
+	     encryption), so it needs no export documentation. Declaring this
+	     skips the per-upload encryption question in App Store Connect. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
@@ -53,6 +58,12 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- v1 ships Email + Sign in with Apple only, so no Google URL scheme is
+	     needed. To enable Google sign-in later: add a CFBundleURLTypes entry
+	     whose CFBundleURLSchemes is your REVERSED iOS OAuth client id
+	     (com.googleusercontent.apps.123456-abcdef) and set GOOGLE_IOS_CLIENT_ID
+	     / GOOGLE_WEB_CLIENT_ID (see docs/09-google-apple-signin.md). The Google
+	     button auto-appears once those keys are present. -->
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

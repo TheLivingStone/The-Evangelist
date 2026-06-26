@@ -345,9 +345,74 @@ class _SettingsCardState extends ConsumerState<_SettingsCard> {
                       apply: (value) => _reminders = value,
                     ),
             ),
+            // Account deletion is required by Apple (Guideline 5.1.1(v)) for any
+            // app with accounts. Hidden in demo mode and for guests (a guest has
+            // no real account — they can just sign out / reinstall).
+            if (Env.backendEnabled &&
+                supabase.auth.currentUser?.isAnonymous == false) ...[
+              const Divider(height: 8),
+              ListTile(
+                leading: const Icon(
+                  Icons.delete_forever_outlined,
+                  color: Color(0xFFE5484D),
+                ),
+                title: const Text(
+                  'Delete account',
+                  style: TextStyle(color: Color(0xFFE5484D)),
+                ),
+                subtitle: const Text('Permanently remove your account and data'),
+                enabled: !_saving.contains('delete'),
+                onTap: _confirmDelete,
+              ),
+            ],
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _confirmDelete() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete account?'),
+        content: const Text(
+          'This permanently deletes your account and all your data — '
+          'contacts, sessions, posts, and stats. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Color(0xFFE5484D)),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _saving.add('delete'));
+    try {
+      await ref.read(profileRepoProvider).deleteAccount();
+      // Account is gone server-side; clear the local session. The auth gate in
+      // main.dart then returns to the sign-in screen. signOut tolerates the
+      // already-deleted user.
+      try {
+        await supabase.auth.signOut();
+      } catch (_) {/* session already invalid — fine */}
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _saving.remove('delete'));
+      messenger.showSnackBar(
+        SnackBar(content: Text('Could not delete account: $error')),
+      );
+    }
   }
 }
