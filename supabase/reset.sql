@@ -2,8 +2,8 @@
 -- The Evangelist — DESTRUCTIVE reset (run FIRST, before schema.sql).
 --
 -- Drops every object the app owns so schema.sql + policies.sql can recreate
--- them cleanly. Use this when migrating the existing (uuid/Supabase-Auth)
--- database to the Clerk-based schema (profiles.id as text, auth.jwt()->>'sub').
+-- them cleanly. Use this to rebuild the database from scratch on the current
+-- Supabase Auth model (profiles.id as uuid referencing auth.users, auth.uid()).
 --
 -- ⚠️  This DELETES ALL DATA in these tables. Safe here because the project has
 --     no real users yet — only the achievement/verse seeds, which schema.sql
@@ -12,8 +12,8 @@
 -- Run order:  reset.sql  →  schema.sql  →  policies.sql
 -- =====================================================================
 
--- ---------- Old auth trigger (Clerk users never touch auth.users) ----------
--- The original deploy added this trigger + function; remove them.
+-- ---------- Auth trigger (recreated by schema.sql) ----------
+-- Drop so schema.sql can recreate them cleanly.
 drop trigger if exists on_auth_user_created on auth.users;
 drop function if exists handle_new_user() cascade;
 

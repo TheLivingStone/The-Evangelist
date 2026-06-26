@@ -48,7 +48,7 @@ create or replace function register_church(
 returns uuid
 language plpgsql security definer set search_path = public as $$
 declare
-  v_uid text := auth.jwt() ->> 'sub';
+  v_uid uuid := auth.uid();
   v_id  uuid;
 begin
   if v_uid is null then
@@ -91,8 +91,8 @@ create or replace function claim_church(
 returns void
 language plpgsql security definer set search_path = public as $$
 declare
-  v_uid text := auth.jwt() ->> 'sub';
-  v_existing_owner text;
+  v_uid uuid := auth.uid();
+  v_existing_owner uuid;
   v_verified boolean;
 begin
   if v_uid is null then

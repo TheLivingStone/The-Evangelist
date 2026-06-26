@@ -1,8 +1,16 @@
 -- =====================================================================
--- The Evangelist — ONE-SHOT Clerk migration.
+-- The Evangelist — ONE-SHOT database setup (Supabase Auth model).
 -- Paste this ENTIRE file into the Supabase SQL Editor and Run once.
 -- It runs: reset (drop old) -> schema (create) -> policies (RLS+RPCs).
--- Re-runnable: safe to run again from any half-migrated state.
+-- Re-runnable: safe to run again from any half-set-up state.
+--
+-- AUTH MODEL: Supabase Auth. profiles.id is a uuid referencing
+-- auth.users(id); the current user is auth.uid(). A handle_new_user()
+-- trigger creates the profiles row automatically on signup.
+--
+-- After this, run the feature migrations (any order, all idempotent):
+--   migrate_church_members.sql, migrate_church_registration.sql,
+--   migrate_feed_comments_photos.sql, migrate_admin_analytics.sql
 -- =====================================================================
 
 -- ########## 1/3 RESET ##########
@@ -10,8 +18,8 @@
 -- The Evangelist — DESTRUCTIVE reset (run FIRST, before schema.sql).
 --
 -- Drops every object the app owns so schema.sql + policies.sql can recreate
--- them cleanly. Use this when migrating the existing (uuid/Supabase-Auth)
--- database to the Clerk-based schema (profiles.id as text, auth.jwt()->>'sub').
+-- them cleanly. Use this to rebuild the database from scratch on the current
+-- Supabase Auth model (profiles.id as uuid referencing auth.users, auth.uid()).
 --
 -- ⚠️  This DELETES ALL DATA in these tables. Safe here because the project has
 --     no real users yet — only the achievement/verse seeds, which schema.sql
@@ -20,8 +28,8 @@
 -- Run order:  reset.sql  →  schema.sql  →  policies.sql
 -- =====================================================================
 
--- ---------- Old auth trigger (Clerk users never touch auth.users) ----------
--- The original deploy added this trigger + function; remove them.
+-- ---------- Auth trigger (recreated by schema.sql) ----------
+-- Drop so schema.sql can recreate them cleanly.
 drop trigger if exists on_auth_user_created on auth.users;
 drop function if exists handle_new_user() cascade;
 
@@ -72,6 +80,13 @@ drop type if exists session_status   cascade;
 -- =====================================================================
 -- The Evangelist — Database schema (Supabase / Postgres 15+)
 -- Run this file FIRST, then run policies.sql.
+--
+-- AUTH MODEL: Supabase Auth. The current user is auth.uid() (a uuid).
+-- profiles.id IS that uuid and references auth.users(id) ON DELETE CASCADE,
+-- so deleting the auth user (account deletion) removes all of their data.
+-- A handle_new_user() trigger creates the profiles row automatically on
+-- signup (including anonymous "guest" signups), reading full_name from the
+-- user's raw_user_meta_data.
 -- =====================================================================
 
 -- ---------- Extensions ----------
@@ -99,14 +114,13 @@ create type session_status as enum
   ('live','completed','cancelled');
 
 -- =====================================================================
--- PROFILES  (1:1 with a Clerk user)
--- id holds the Clerk user id (the JWT 'sub' claim, e.g. 'user_abc123').
--- Identity lives in Clerk, not auth.users, so there is no FK to auth.users
--- and no on_auth_user_created trigger — the app upserts this row on first
--- authenticated launch (see lib/repositories ProfileRepo.ensure()).
+-- PROFILES  (1:1 with a Supabase Auth user)
+-- id = auth.users(id). The handle_new_user() trigger (below) inserts this
+-- row on signup, so the app never has to create it. ON DELETE CASCADE means
+-- removing the auth user wipes the profile and everything that references it.
 -- =====================================================================
 create table profiles (
-  id                       text primary key,
+  id                       uuid primary key references auth.users(id) on delete cascade,
   full_name                text not null,
   username                 text unique,
   city                     text,
@@ -130,14 +144,14 @@ create table profiles (
   created_at               timestamptz not null default now(),
   updated_at               timestamptz not null default now()
 );
-comment on table profiles is 'Public-facing user profile; id = Clerk user id (JWT sub). Stats are denormalised caches maintained by triggers.';
+comment on table profiles is 'Public-facing user profile; id = auth.users id (uuid). Stats are denormalised caches maintained by triggers.';
 
 -- =====================================================================
 -- CONTACTS  ("My People" — the evangelism CRM)
 -- =====================================================================
 create table contacts (
   id               uuid primary key default gen_random_uuid(),
-  owner_id         text not null references profiles(id) on delete cascade,
+  owner_id         uuid not null references profiles(id) on delete cascade,
   first_name       text not null,
   last_name        text,
   phone            text,
@@ -163,7 +177,7 @@ create index idx_contacts_status       on contacts(owner_id, status);
 create table followups (
   id           uuid primary key default gen_random_uuid(),
   contact_id   uuid not null references contacts(id) on delete cascade,
-  owner_id     text not null references profiles(id) on delete cascade,
+  owner_id     uuid not null references profiles(id) on delete cascade,
   day_offset   int not null,                         -- 1, 3, 7, 14, 30 (or custom)
   title        text not null,                        -- 'Welcome message', 'Church recommendation', ...
   message      text,                                 -- AI-drafted or user-edited body
@@ -181,7 +195,7 @@ create index idx_followups_contact   on followups(contact_id);
 -- =====================================================================
 create table outreach_sessions (
   id                uuid primary key default gen_random_uuid(),
-  user_id           text not null references profiles(id) on delete cascade,
+  user_id           uuid not null references profiles(id) on delete cascade,
   started_at        timestamptz not null default now(),
   ended_at          timestamptz,
   duration_seconds  int,
@@ -201,7 +215,7 @@ create index idx_sessions_live on outreach_sessions(status) where status = 'live
 -- =====================================================================
 create table activity_logs (
   id          uuid primary key default gen_random_uuid(),
-  user_id     text not null references profiles(id) on delete cascade,
+  user_id     uuid not null references profiles(id) on delete cascade,
   type        activity_type not null,
   contact_id  uuid references contacts(id) on delete set null,
   session_id  uuid references outreach_sessions(id) on delete set null,
@@ -226,7 +240,7 @@ create table churches (
   website            text,
   statement_of_faith text,
   contact_info       text,
-  claimed_by         text references profiles(id) on delete set null,
+  claimed_by         uuid references profiles(id) on delete set null,
   is_verified        boolean not null default false,
   created_at         timestamptz not null default now()
 );
@@ -241,7 +255,7 @@ alter table activity_logs
 -- =====================================================================
 create table events (
   id            uuid primary key default gen_random_uuid(),
-  host_id       text not null references profiles(id) on delete cascade,
+  host_id       uuid not null references profiles(id) on delete cascade,
   title         text not null,
   description   text,
   location      geography(Point,4326),
@@ -254,7 +268,7 @@ create index idx_events_time on events(starts_at);
 
 create table event_attendees (
   event_id  uuid not null references events(id) on delete cascade,
-  user_id   text not null references profiles(id) on delete cascade,
+  user_id   uuid not null references profiles(id) on delete cascade,
   joined_at timestamptz not null default now(),
   primary key (event_id, user_id)
 );
@@ -264,7 +278,7 @@ create table event_attendees (
 -- =====================================================================
 create table posts (
   id          uuid primary key default gen_random_uuid(),
-  author_id   text not null references profiles(id) on delete cascade,
+  author_id   uuid not null references profiles(id) on delete cascade,
   type        post_type not null default 'testimony',
   body        text not null,
   photo_url   text,
@@ -281,7 +295,7 @@ create index idx_posts_author on posts(author_id, created_at desc);
 
 create table post_reactions (
   post_id    uuid not null references posts(id) on delete cascade,
-  user_id    text not null references profiles(id) on delete cascade,
+  user_id    uuid not null references profiles(id) on delete cascade,
   reaction   reaction_type not null,
   created_at timestamptz not null default now(),
   primary key (post_id, user_id, reaction)
@@ -291,7 +305,7 @@ create index idx_reactions_post on post_reactions(post_id);
 create table comments (
   id         uuid primary key default gen_random_uuid(),
   post_id    uuid not null references posts(id) on delete cascade,
-  author_id  text not null references profiles(id) on delete cascade,
+  author_id  uuid not null references profiles(id) on delete cascade,
   body       text not null,
   created_at timestamptz not null default now()
 );
@@ -303,7 +317,7 @@ create index idx_comments_post on comments(post_id, created_at);
 -- the nearby_evangelists() geo query and survives reconnects.
 -- =====================================================================
 create table live_presence (
-  user_id         text primary key references profiles(id) on delete cascade,
+  user_id         uuid primary key references profiles(id) on delete cascade,
   location        geography(Point,4326) not null,
   is_evangelizing boolean not null default true,
   session_id      uuid references outreach_sessions(id) on delete set null,
@@ -321,12 +335,12 @@ create table groups (
   name        text not null,
   city        text,
   description text,
-  created_by  text references profiles(id) on delete set null,
+  created_by  uuid references profiles(id) on delete set null,
   created_at  timestamptz not null default now()
 );
 create table group_members (
   group_id  uuid not null references groups(id) on delete cascade,
-  user_id   text not null references profiles(id) on delete cascade,
+  user_id   uuid not null references profiles(id) on delete cascade,
   role      text not null default 'member',          -- 'member' | 'leader'
   joined_at timestamptz not null default now(),
   primary key (group_id, user_id)
@@ -343,7 +357,7 @@ create table achievements (
   sort_order  int not null default 0
 );
 create table user_achievements (
-  user_id        text not null references profiles(id) on delete cascade,
+  user_id        uuid not null references profiles(id) on delete cascade,
   achievement_key text not null references achievements(key) on delete cascade,
   earned_at      timestamptz not null default now(),
   primary key (user_id, achievement_key)
@@ -359,7 +373,7 @@ create table verses (
   theme     text
 );
 create table daily_missions (
-  user_id    text not null references profiles(id) on delete cascade,
+  user_id    uuid not null references profiles(id) on delete cascade,
   mission_date date not null default current_date,
   verse_id   uuid references verses(id),
   tasks      jsonb not null default '[]',              -- [{label, done}]
@@ -372,7 +386,7 @@ create table daily_missions (
 -- =====================================================================
 create table notifications (
   id         uuid primary key default gen_random_uuid(),
-  user_id    text not null references profiles(id) on delete cascade,
+  user_id    uuid not null references profiles(id) on delete cascade,
   type       text not null,                            -- 'followup_due','encouraged','event_reminder',...
   title      text not null,
   body       text,
@@ -384,7 +398,7 @@ create index idx_notifications_user on notifications(user_id, created_at desc) w
 
 create table devices (
   id         uuid primary key default gen_random_uuid(),
-  user_id    text not null references profiles(id) on delete cascade,
+  user_id    uuid not null references profiles(id) on delete cascade,
   fcm_token  text not null unique,
   platform   text not null,                            -- 'ios' | 'android'
   created_at timestamptz not null default now()
@@ -394,10 +408,25 @@ create table devices (
 -- TRIGGERS & FUNCTIONS
 -- =====================================================================
 
--- NOTE: Identity is owned by Clerk, not Supabase Auth. Clerk users never
--- create an auth.users row, so the old on_auth_user_created trigger is gone.
--- The Flutter app upserts a profiles row on first authenticated launch
--- (ProfileRepo.ensure), using the Clerk user id (JWT 'sub') as profiles.id.
+-- Create a profiles row automatically whenever a Supabase Auth user is
+-- created (email/password, OAuth, OR anonymous guest). full_name is read
+-- from the signup metadata; it falls back to 'Evangelist' so the NOT NULL
+-- column is always satisfied (anonymous users seed 'Guest' from the client).
+create or replace function handle_new_user()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  insert into profiles (id, full_name)
+  values (
+    new.id,
+    coalesce(nullif(trim(new.raw_user_meta_data ->> 'full_name'), ''), 'Evangelist')
+  )
+  on conflict (id) do nothing;
+  return new;
+end; $$;
+
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function handle_new_user();
 
 -- Keep updated_at fresh.
 create or replace function touch_updated_at()
@@ -451,7 +480,7 @@ create or replace function end_session(
 )
 returns void language plpgsql security definer set search_path = public as $$
 declare
-  v_user_id text;
+  v_user_id uuid;
 begin
   if least(p_conversations, p_prayers, p_people_added) < 0 then
     raise exception 'Session counters cannot be negative';
@@ -465,7 +494,7 @@ begin
       people_added_count = p_people_added,
       status = 'completed'
   where id = p_session_id
-    and user_id = auth.jwt() ->> 'sub'
+    and user_id = auth.uid()
     and status = 'live'
   returning user_id into v_user_id;
 
@@ -511,11 +540,9 @@ on conflict do nothing;
 -- =====================================================================
 -- The Evangelist — Row-Level Security policies + helper RPCs
 -- Run this file AFTER schema.sql.
--- Model: identity is provided by CLERK via Supabase's native third-party
--- auth integration. The app sends the anon (publishable) key + the Clerk
--- session JWT. The current user's id is the Clerk 'sub' claim, read with
---   auth.jwt()->>'sub'   (a text value like 'user_abc123').
--- (auth.jwt()->>'sub') is NOT used — it returns the Supabase uuid, which is null here.
+-- Model: identity is provided by SUPABASE AUTH. The app sends the anon
+-- (publishable) key + the Supabase session JWT. The current user's id is
+-- a uuid read with  auth.uid()  and equals profiles.id.
 -- Privileged jobs use the service role, which bypasses RLS.
 -- =====================================================================
 
@@ -545,95 +572,96 @@ alter table verses            enable row level security;
 -- Anyone signed in can read public profiles (Community, public profile page).
 create policy "profiles are readable by authenticated users"
   on profiles for select to authenticated using (true);
--- The app upserts the caller's own profile on first launch (id must equal the
--- Clerk user id), since there is no longer a DB trigger creating profile rows.
+-- The handle_new_user() trigger creates the profiles row on signup, so the app
+-- normally never inserts. This policy still allows a self-insert (id = auth.uid())
+-- as a safety net for the upsert path.
 create policy "users insert their own profile"
-  on profiles for insert to authenticated with check (id = (auth.jwt()->>'sub'));
+  on profiles for insert to authenticated with check (id = auth.uid());
 create policy "users update their own profile"
-  on profiles for update to authenticated using (id = (auth.jwt()->>'sub')) with check (id = (auth.jwt()->>'sub'));
+  on profiles for update to authenticated using (id = auth.uid()) with check (id = auth.uid());
 
 -- ---------- CONTACTS (owner-only, fully private) ----------
-create policy "owner can read contacts"   on contacts for select to authenticated using (owner_id = (auth.jwt()->>'sub'));
-create policy "owner can insert contacts" on contacts for insert to authenticated with check (owner_id = (auth.jwt()->>'sub'));
-create policy "owner can update contacts" on contacts for update to authenticated using (owner_id = (auth.jwt()->>'sub'));
-create policy "owner can delete contacts" on contacts for delete to authenticated using (owner_id = (auth.jwt()->>'sub'));
+create policy "owner can read contacts"   on contacts for select to authenticated using (owner_id = auth.uid());
+create policy "owner can insert contacts" on contacts for insert to authenticated with check (owner_id = auth.uid());
+create policy "owner can update contacts" on contacts for update to authenticated using (owner_id = auth.uid());
+create policy "owner can delete contacts" on contacts for delete to authenticated using (owner_id = auth.uid());
 
 -- ---------- FOLLOWUPS (owner-only) ----------
 create policy "owner rw followups"
-  on followups for all to authenticated using (owner_id = (auth.jwt()->>'sub')) with check (owner_id = (auth.jwt()->>'sub'));
+  on followups for all to authenticated using (owner_id = auth.uid()) with check (owner_id = auth.uid());
 
 -- ---------- OUTREACH SESSIONS (owner-only) ----------
 create policy "owner rw sessions"
-  on outreach_sessions for all to authenticated using (user_id = (auth.jwt()->>'sub')) with check (user_id = (auth.jwt()->>'sub'));
+  on outreach_sessions for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 -- ---------- ACTIVITY LOGS (owner can insert/read own; append-only) ----------
-create policy "owner read logs"   on activity_logs for select to authenticated using (user_id = (auth.jwt()->>'sub'));
-create policy "owner insert logs" on activity_logs for insert to authenticated with check (user_id = (auth.jwt()->>'sub'));
+create policy "owner read logs"   on activity_logs for select to authenticated using (user_id = auth.uid());
+create policy "owner insert logs" on activity_logs for insert to authenticated with check (user_id = auth.uid());
 -- (no update/delete policies => append-only for clients)
 
 -- ---------- CHURCHES (public read; authed create; claimant edits) ----------
 create policy "churches public read" on churches for select to authenticated using (true);
-create policy "authed add church"    on churches for insert to authenticated with check ((auth.jwt()->>'sub') is not null);
-create policy "claimant edits church" on churches for update to authenticated using (claimed_by = (auth.jwt()->>'sub'));
+create policy "authed add church"    on churches for insert to authenticated with check (auth.uid() is not null);
+create policy "claimant edits church" on churches for update to authenticated using (claimed_by = auth.uid());
 
 -- ---------- EVENTS (public read; host manages) ----------
 create policy "events public read" on events for select to authenticated using (true);
 create policy "host manages events" on events for all to authenticated
-  using (host_id = (auth.jwt()->>'sub')) with check (host_id = (auth.jwt()->>'sub'));
+  using (host_id = auth.uid()) with check (host_id = auth.uid());
 
 create policy "attendees readable" on event_attendees for select to authenticated using (true);
 create policy "join/leave own"     on event_attendees for all to authenticated
-  using (user_id = (auth.jwt()->>'sub')) with check (user_id = (auth.jwt()->>'sub'));
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 -- ---------- POSTS (public read; author writes) ----------
-create policy "public posts readable" on posts for select to authenticated using (is_public = true or author_id = (auth.jwt()->>'sub'));
-create policy "author creates post"   on posts for insert to authenticated with check (author_id = (auth.jwt()->>'sub'));
-create policy "author edits post"     on posts for update to authenticated using (author_id = (auth.jwt()->>'sub'));
-create policy "author deletes post"   on posts for delete to authenticated using (author_id = (auth.jwt()->>'sub'));
+create policy "public posts readable" on posts for select to authenticated using (is_public = true or author_id = auth.uid());
+create policy "author creates post"   on posts for insert to authenticated with check (author_id = auth.uid());
+create policy "author edits post"     on posts for update to authenticated using (author_id = auth.uid());
+create policy "author deletes post"   on posts for delete to authenticated using (author_id = auth.uid());
 
 -- ---------- REACTIONS & COMMENTS (public read; own writes) ----------
 create policy "reactions readable" on post_reactions for select to authenticated using (true);
 create policy "own reactions"      on post_reactions for all to authenticated
-  using (user_id = (auth.jwt()->>'sub')) with check (user_id = (auth.jwt()->>'sub'));
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 create policy "comments readable" on comments for select to authenticated using (true);
-create policy "author writes comment" on comments for insert to authenticated with check (author_id = (auth.jwt()->>'sub'));
-create policy "author edits comment"  on comments for update to authenticated using (author_id = (auth.jwt()->>'sub'));
-create policy "author deletes comment" on comments for delete to authenticated using (author_id = (auth.jwt()->>'sub'));
+create policy "author writes comment" on comments for insert to authenticated with check (author_id = auth.uid());
+create policy "author edits comment"  on comments for update to authenticated using (author_id = auth.uid());
+create policy "author deletes comment" on comments for delete to authenticated using (author_id = auth.uid());
 
 -- ---------- LIVE PRESENCE (write own only; NO direct select) ----------
 -- Clients never SELECT this table directly. They get fuzzed locations via
 -- the nearby_evangelists() RPC, which respects is_visible_on_map.
-create policy "upsert own presence" on live_presence for insert to authenticated with check (user_id = (auth.jwt()->>'sub'));
-create policy "update own presence" on live_presence for update to authenticated using (user_id = (auth.jwt()->>'sub'));
-create policy "delete own presence" on live_presence for delete to authenticated using (user_id = (auth.jwt()->>'sub'));
+create policy "upsert own presence" on live_presence for insert to authenticated with check (user_id = auth.uid());
+create policy "update own presence" on live_presence for update to authenticated using (user_id = auth.uid());
+create policy "delete own presence" on live_presence for delete to authenticated using (user_id = auth.uid());
 -- (deliberately no SELECT policy)
 
 -- ---------- GROUPS ----------
 create policy "groups public read" on groups for select to authenticated using (true);
 create policy "creator manages group" on groups for all to authenticated
-  using (created_by = (auth.jwt()->>'sub')) with check (created_by = (auth.jwt()->>'sub'));
+  using (created_by = auth.uid()) with check (created_by = auth.uid());
 create policy "members readable" on group_members for select to authenticated using (true);
 create policy "join/leave groups" on group_members for all to authenticated
-  using (user_id = (auth.jwt()->>'sub')) with check (user_id = (auth.jwt()->>'sub'));
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 -- ---------- ACHIEVEMENTS ----------
 create policy "achievement catalog readable" on achievements for select to authenticated using (true);
 create policy "verse catalog readable"       on verses for select to authenticated using (true);
-create policy "own achievements readable"    on user_achievements for select to authenticated using (user_id = (auth.jwt()->>'sub'));
+create policy "own achievements readable"    on user_achievements for select to authenticated using (user_id = auth.uid());
 -- user_achievements are written by service-role (award logic), not clients.
 
 -- ---------- DAILY MISSIONS (owner-only) ----------
 create policy "owner rw missions" on daily_missions for all to authenticated
-  using (user_id = (auth.jwt()->>'sub')) with check (user_id = (auth.jwt()->>'sub'));
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 -- ---------- NOTIFICATIONS (owner read/update; created by service role) ----------
-create policy "owner reads notifications"   on notifications for select to authenticated using (user_id = (auth.jwt()->>'sub'));
-create policy "owner updates notifications" on notifications for update to authenticated using (user_id = (auth.jwt()->>'sub'));
+create policy "owner reads notifications"   on notifications for select to authenticated using (user_id = auth.uid());
+create policy "owner updates notifications" on notifications for update to authenticated using (user_id = auth.uid());
 
 -- ---------- DEVICES (owner-only) ----------
 create policy "owner rw devices" on devices for all to authenticated
-  using (user_id = (auth.jwt()->>'sub')) with check (user_id = (auth.jwt()->>'sub'));
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 -- =====================================================================
 -- PRIVACY-PRESERVING RPCs (security definer = run as owner, bypass RLS,
@@ -644,7 +672,7 @@ create policy "owner rw devices" on devices for all to authenticated
 -- for users who are currently live, not expired, and map-visible.
 create or replace function nearby_evangelists(lat double precision, lng double precision, radius_m int default 5000)
 returns table (
-  user_id text, full_name text, avatar_url text,
+  user_id uuid, full_name text, avatar_url text,
   approx_lat double precision, approx_lng double precision, distance_m double precision
 )
 language sql security definer set search_path = public stable as $$
@@ -658,7 +686,7 @@ language sql security definer set search_path = public stable as $$
   where lp.is_evangelizing
     and lp.expires_at > now()
     and p.is_visible_on_map
-    and p.id <> (auth.jwt()->>'sub')
+    and p.id <> auth.uid()
     and st_dwithin(lp.location, st_point(lng, lat)::geography, radius_m)
   order by distance_m
   limit 100;

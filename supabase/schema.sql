@@ -1,6 +1,13 @@
 -- =====================================================================
 -- The Evangelist — Database schema (Supabase / Postgres 15+)
 -- Run this file FIRST, then run policies.sql.
+--
+-- AUTH MODEL: Supabase Auth. The current user is auth.uid() (a uuid).
+-- profiles.id IS that uuid and references auth.users(id) ON DELETE CASCADE,
+-- so deleting the auth user (account deletion) removes all of their data.
+-- A handle_new_user() trigger creates the profiles row automatically on
+-- signup (including anonymous "guest" signups), reading full_name from the
+-- user's raw_user_meta_data.
 -- =====================================================================
 
 -- ---------- Extensions ----------
@@ -28,14 +35,13 @@ create type session_status as enum
   ('live','completed','cancelled');
 
 -- =====================================================================
--- PROFILES  (1:1 with a Clerk user)
--- id holds the Clerk user id (the JWT 'sub' claim, e.g. 'user_abc123').
--- Identity lives in Clerk, not auth.users, so there is no FK to auth.users
--- and no on_auth_user_created trigger — the app upserts this row on first
--- authenticated launch (see lib/repositories ProfileRepo.ensure()).
+-- PROFILES  (1:1 with a Supabase Auth user)
+-- id = auth.users(id). The handle_new_user() trigger (below) inserts this
+-- row on signup, so the app never has to create it. ON DELETE CASCADE means
+-- removing the auth user wipes the profile and everything that references it.
 -- =====================================================================
 create table profiles (
-  id                       text primary key,
+  id                       uuid primary key references auth.users(id) on delete cascade,
   full_name                text not null,
   username                 text unique,
   city                     text,
@@ -59,14 +65,14 @@ create table profiles (
   created_at               timestamptz not null default now(),
   updated_at               timestamptz not null default now()
 );
-comment on table profiles is 'Public-facing user profile; id = Clerk user id (JWT sub). Stats are denormalised caches maintained by triggers.';
+comment on table profiles is 'Public-facing user profile; id = auth.users id (uuid). Stats are denormalised caches maintained by triggers.';
 
 -- =====================================================================
 -- CONTACTS  ("My People" — the evangelism CRM)
 -- =====================================================================
 create table contacts (
   id               uuid primary key default gen_random_uuid(),
-  owner_id         text not null references profiles(id) on delete cascade,
+  owner_id         uuid not null references profiles(id) on delete cascade,
   first_name       text not null,
   last_name        text,
   phone            text,
@@ -92,7 +98,7 @@ create index idx_contacts_status       on contacts(owner_id, status);
 create table followups (
   id           uuid primary key default gen_random_uuid(),
   contact_id   uuid not null references contacts(id) on delete cascade,
-  owner_id     text not null references profiles(id) on delete cascade,
+  owner_id     uuid not null references profiles(id) on delete cascade,
   day_offset   int not null,                         -- 1, 3, 7, 14, 30 (or custom)
   title        text not null,                        -- 'Welcome message', 'Church recommendation', ...
   message      text,                                 -- AI-drafted or user-edited body
@@ -110,7 +116,7 @@ create index idx_followups_contact   on followups(contact_id);
 -- =====================================================================
 create table outreach_sessions (
   id                uuid primary key default gen_random_uuid(),
-  user_id           text not null references profiles(id) on delete cascade,
+  user_id           uuid not null references profiles(id) on delete cascade,
   started_at        timestamptz not null default now(),
   ended_at          timestamptz,
   duration_seconds  int,
@@ -130,7 +136,7 @@ create index idx_sessions_live on outreach_sessions(status) where status = 'live
 -- =====================================================================
 create table activity_logs (
   id          uuid primary key default gen_random_uuid(),
-  user_id     text not null references profiles(id) on delete cascade,
+  user_id     uuid not null references profiles(id) on delete cascade,
   type        activity_type not null,
   contact_id  uuid references contacts(id) on delete set null,
   session_id  uuid references outreach_sessions(id) on delete set null,
@@ -155,7 +161,7 @@ create table churches (
   website            text,
   statement_of_faith text,
   contact_info       text,
-  claimed_by         text references profiles(id) on delete set null,
+  claimed_by         uuid references profiles(id) on delete set null,
   is_verified        boolean not null default false,
   created_at         timestamptz not null default now()
 );
@@ -170,7 +176,7 @@ alter table activity_logs
 -- =====================================================================
 create table events (
   id            uuid primary key default gen_random_uuid(),
-  host_id       text not null references profiles(id) on delete cascade,
+  host_id       uuid not null references profiles(id) on delete cascade,
   title         text not null,
   description   text,
   location      geography(Point,4326),
@@ -183,7 +189,7 @@ create index idx_events_time on events(starts_at);
 
 create table event_attendees (
   event_id  uuid not null references events(id) on delete cascade,
-  user_id   text not null references profiles(id) on delete cascade,
+  user_id   uuid not null references profiles(id) on delete cascade,
   joined_at timestamptz not null default now(),
   primary key (event_id, user_id)
 );
@@ -193,7 +199,7 @@ create table event_attendees (
 -- =====================================================================
 create table posts (
   id          uuid primary key default gen_random_uuid(),
-  author_id   text not null references profiles(id) on delete cascade,
+  author_id   uuid not null references profiles(id) on delete cascade,
   type        post_type not null default 'testimony',
   body        text not null,
   photo_url   text,
@@ -210,7 +216,7 @@ create index idx_posts_author on posts(author_id, created_at desc);
 
 create table post_reactions (
   post_id    uuid not null references posts(id) on delete cascade,
-  user_id    text not null references profiles(id) on delete cascade,
+  user_id    uuid not null references profiles(id) on delete cascade,
   reaction   reaction_type not null,
   created_at timestamptz not null default now(),
   primary key (post_id, user_id, reaction)
@@ -220,7 +226,7 @@ create index idx_reactions_post on post_reactions(post_id);
 create table comments (
   id         uuid primary key default gen_random_uuid(),
   post_id    uuid not null references posts(id) on delete cascade,
-  author_id  text not null references profiles(id) on delete cascade,
+  author_id  uuid not null references profiles(id) on delete cascade,
   body       text not null,
   created_at timestamptz not null default now()
 );
@@ -232,7 +238,7 @@ create index idx_comments_post on comments(post_id, created_at);
 -- the nearby_evangelists() geo query and survives reconnects.
 -- =====================================================================
 create table live_presence (
-  user_id         text primary key references profiles(id) on delete cascade,
+  user_id         uuid primary key references profiles(id) on delete cascade,
   location        geography(Point,4326) not null,
   is_evangelizing boolean not null default true,
   session_id      uuid references outreach_sessions(id) on delete set null,
@@ -250,12 +256,12 @@ create table groups (
   name        text not null,
   city        text,
   description text,
-  created_by  text references profiles(id) on delete set null,
+  created_by  uuid references profiles(id) on delete set null,
   created_at  timestamptz not null default now()
 );
 create table group_members (
   group_id  uuid not null references groups(id) on delete cascade,
-  user_id   text not null references profiles(id) on delete cascade,
+  user_id   uuid not null references profiles(id) on delete cascade,
   role      text not null default 'member',          -- 'member' | 'leader'
   joined_at timestamptz not null default now(),
   primary key (group_id, user_id)
@@ -272,7 +278,7 @@ create table achievements (
   sort_order  int not null default 0
 );
 create table user_achievements (
-  user_id        text not null references profiles(id) on delete cascade,
+  user_id        uuid not null references profiles(id) on delete cascade,
   achievement_key text not null references achievements(key) on delete cascade,
   earned_at      timestamptz not null default now(),
   primary key (user_id, achievement_key)
@@ -288,7 +294,7 @@ create table verses (
   theme     text
 );
 create table daily_missions (
-  user_id    text not null references profiles(id) on delete cascade,
+  user_id    uuid not null references profiles(id) on delete cascade,
   mission_date date not null default current_date,
   verse_id   uuid references verses(id),
   tasks      jsonb not null default '[]',              -- [{label, done}]
@@ -301,7 +307,7 @@ create table daily_missions (
 -- =====================================================================
 create table notifications (
   id         uuid primary key default gen_random_uuid(),
-  user_id    text not null references profiles(id) on delete cascade,
+  user_id    uuid not null references profiles(id) on delete cascade,
   type       text not null,                            -- 'followup_due','encouraged','event_reminder',...
   title      text not null,
   body       text,
@@ -313,7 +319,7 @@ create index idx_notifications_user on notifications(user_id, created_at desc) w
 
 create table devices (
   id         uuid primary key default gen_random_uuid(),
-  user_id    text not null references profiles(id) on delete cascade,
+  user_id    uuid not null references profiles(id) on delete cascade,
   fcm_token  text not null unique,
   platform   text not null,                            -- 'ios' | 'android'
   created_at timestamptz not null default now()
@@ -323,10 +329,25 @@ create table devices (
 -- TRIGGERS & FUNCTIONS
 -- =====================================================================
 
--- NOTE: Identity is owned by Clerk, not Supabase Auth. Clerk users never
--- create an auth.users row, so the old on_auth_user_created trigger is gone.
--- The Flutter app upserts a profiles row on first authenticated launch
--- (ProfileRepo.ensure), using the Clerk user id (JWT 'sub') as profiles.id.
+-- Create a profiles row automatically whenever a Supabase Auth user is
+-- created (email/password, OAuth, OR anonymous guest). full_name is read
+-- from the signup metadata; it falls back to 'Evangelist' so the NOT NULL
+-- column is always satisfied (anonymous users seed 'Guest' from the client).
+create or replace function handle_new_user()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  insert into profiles (id, full_name)
+  values (
+    new.id,
+    coalesce(nullif(trim(new.raw_user_meta_data ->> 'full_name'), ''), 'Evangelist')
+  )
+  on conflict (id) do nothing;
+  return new;
+end; $$;
+
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function handle_new_user();
 
 -- Keep updated_at fresh.
 create or replace function touch_updated_at()
@@ -380,7 +401,7 @@ create or replace function end_session(
 )
 returns void language plpgsql security definer set search_path = public as $$
 declare
-  v_user_id text;
+  v_user_id uuid;
 begin
   if least(p_conversations, p_prayers, p_people_added) < 0 then
     raise exception 'Session counters cannot be negative';
@@ -394,7 +415,7 @@ begin
       people_added_count = p_people_added,
       status = 'completed'
   where id = p_session_id
-    and user_id = auth.jwt() ->> 'sub'
+    and user_id = auth.uid()
     and status = 'live'
   returning user_id into v_user_id;
 

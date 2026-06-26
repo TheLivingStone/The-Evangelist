@@ -32,8 +32,8 @@ on conflict (id) do update
       allowed_mime_types = excluded.allowed_mime_types;
 
 -- RLS on storage.objects: public read for this bucket, owner-scoped writes.
--- Files are stored under "<clerk_user_id>/<filename>", so the first path
--- segment must equal the caller's Clerk sub for insert/update/delete.
+-- Files are stored under "<user_id>/<filename>", so the first path segment
+-- must equal the caller's auth.uid() (cast to text) for insert/update/delete.
 -- Drop-then-create keeps this migration safely re-runnable.
 drop policy if exists "post-photos public read"   on storage.objects;
 drop policy if exists "post-photos owner upload"   on storage.objects;
@@ -48,19 +48,19 @@ create policy "post-photos owner upload"
   on storage.objects for insert to authenticated
   with check (
     bucket_id = 'post-photos'
-    and (storage.foldername(name))[1] = (auth.jwt()->>'sub')
+    and (storage.foldername(name))[1] = auth.uid()::text
   );
 
 create policy "post-photos owner update"
   on storage.objects for update to authenticated
   using (
     bucket_id = 'post-photos'
-    and (storage.foldername(name))[1] = (auth.jwt()->>'sub')
+    and (storage.foldername(name))[1] = auth.uid()::text
   );
 
 create policy "post-photos owner delete"
   on storage.objects for delete to authenticated
   using (
     bucket_id = 'post-photos'
-    and (storage.foldername(name))[1] = (auth.jwt()->>'sub')
+    and (storage.foldername(name))[1] = auth.uid()::text
   );
