@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../core/auth_account.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
 
@@ -70,6 +71,9 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
 
   Future<void> _post() async {
     if (_body.text.trim().isEmpty) return;
+    // Guests must create an account before posting publicly.
+    if (!await requireAccount(context, ref)) return;
+    if (!mounted) return;
     setState(() => _busy = true);
     try {
       final profile = ref.read(myProfileProvider).value;

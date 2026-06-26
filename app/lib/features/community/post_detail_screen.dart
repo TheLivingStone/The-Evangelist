@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/auth_account.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../../models/models.dart';
@@ -35,6 +36,8 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
 
   Future<void> _react(String reaction) async {
     if (_pending.contains(reaction)) return;
+    if (!await requireAccount(context, ref)) return;
+    if (!mounted) return;
     final wasOn = _mine.contains(reaction);
     final oldCount = _counts[reaction] ?? 0;
     setState(() {
@@ -72,6 +75,8 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   Future<void> _send() async {
     final text = _input.text.trim();
     if (text.isEmpty || _sending) return;
+    if (!await requireAccount(context, ref)) return;
+    if (!mounted) return;
     setState(() => _sending = true);
     try {
       await ref.read(commentsRepoProvider).add(widget.post.id, text);

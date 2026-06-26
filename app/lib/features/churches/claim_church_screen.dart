@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/auth_account.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../../models/models.dart';
@@ -45,6 +46,8 @@ class _ClaimChurchScreenState extends ConsumerState<ClaimChurchScreen> {
       );
       return;
     }
+    if (!await requireAccount(context, ref)) return;
+    if (!mounted) return;
     setState(() => _busy = true);
     try {
       await ref.read(churchesRepoProvider).claim(

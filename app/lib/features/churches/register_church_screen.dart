@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import '../../core/auth_account.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
 
@@ -107,6 +108,8 @@ class _RegisterChurchScreenState extends ConsumerState<RegisterChurchScreen> {
       );
       return;
     }
+    if (!await requireAccount(context, ref)) return;
+    if (!mounted) return;
     setState(() => _busy = true);
     try {
       await ref.read(churchesRepoProvider).register(
