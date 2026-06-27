@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/auth_account.dart';
 import '../../core/theme.dart';
 import '../../core/providers.dart';
 import '../dashboard/dashboard_screen.dart';
@@ -79,7 +80,10 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       // anchor downward; pair it with a small notchMargin below.
       floatingActionButtonLocation: const _DockedDown(),
       bottomNavigationBar: BottomAppBar(
-        height: 64,
+        // Grow the bar with the user's text size so the icon+label column never
+        // overflows (the default 64 overflowed at larger Dynamic Type sizes).
+        height: 58 + 14 * MediaQuery.textScalerOf(context).scale(1),
+        padding: EdgeInsets.zero,
         shape: const CircularNotchedRectangle(),
         notchMargin: 5,
         color: Theme.of(context).colorScheme.surface,
@@ -97,30 +101,45 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     );
   }
 
+  /// Switch tabs, but gate Profile (index 4) behind a real account — a guest
+  /// tapping Profile is prompted to create one first. All other tabs are open.
+  Future<void> _selectTab(int i) async {
+    if (i == 4 && !await requireAccount(context, ref)) return;
+    if (!mounted) return;
+    setState(() {
+      _index = i;
+      _loadedTabs.add(i);
+    });
+  }
+
   Widget _navItem(int i, IconData icon, IconData active, String label) {
     final selected = _index == i;
     final color = selected
         ? AppColors.accent
         : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
-    return InkWell(
-      onTap: () => setState(() {
-        _index = i;
-        _loadedTabs.add(i);
-      }),
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(selected ? active : icon, color: color, size: 22),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(color: color, fontSize: 10, height: 1.0),
-            ),
-          ],
+    // Expanded so the four items share the row evenly and a longer label can
+    // never shove its neighbours off-screen.
+    return Expanded(
+      child: InkWell(
+        onTap: () => _selectTab(i),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(selected ? active : icon, color: color, size: 22),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: color, fontSize: 10, height: 1.0),
+              ),
+            ],
+          ),
         ),
       ),
     );

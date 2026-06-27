@@ -20,6 +20,25 @@ Future<void> main() async {
   if (Env.backendEnabled) {
     try {
       await initSupabase();
+      // Login is disabled for now: if no session was restored, sign in
+      // anonymously so the user lands straight in the app. Every screen relies
+      // on a non-null auth user id (RLS + currentUserId), so an anonymous user
+      // keeps all of that working without showing a sign-in screen. A failure
+      // here is non-fatal — the auth gate still shows AuthScreen as a fallback.
+      if (supabase.auth.currentSession == null) {
+        try {
+          // Seed a placeholder full_name: the handle_new_user trigger copies it
+          // into profiles.full_name, which is NOT NULL. Anonymous users have no
+          // real name yet, so without this the profile insert would fail.
+          await supabase.auth.signInAnonymously(
+            data: {'full_name': 'Guest'},
+          );
+        } catch (_) {
+          // Most likely Anonymous sign-ins aren't enabled on the Supabase
+          // project yet (Authentication → Providers → Anonymous). Fall through;
+          // the auth gate will surface the normal sign-in screen.
+        }
+      }
     } catch (_) {
       initOk = false;
     }
@@ -62,6 +81,20 @@ class EvangelistApp extends ConsumerWidget {
       themeMode: themeMode,
       themeAnimationDuration: const Duration(milliseconds: 180),
       themeAnimationCurve: Curves.easeOutCubic,
+      // Honor the user's Dynamic Type setting, but clamp the upper end so the
+      // largest accessibility sizes don't overflow fixed-height rows (e.g. the
+      // bottom nav). 1.0 floor keeps small text from shrinking below design.
+      builder: (context, child) {
+        final mq = MediaQuery.of(context);
+        final clamped = mq.textScaler.clamp(
+          minScaleFactor: 1.0,
+          maxScaleFactor: 1.3,
+        );
+        return MediaQuery(
+          data: mq.copyWith(textScaler: clamped),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       home: home,
     );
   }
@@ -92,7 +125,13 @@ class _SignedInGate extends ConsumerWidget {
     final profile = ref.watch(ensureProfileProvider);
     return profile.when(
       loading: () => const _Splash(),
-      error: (e, _) => _ProfileError(message: e.toString()),
+      // A real account that can't load its profile is a genuine error worth
+      // surfacing. But a guest (anonymous) must never be trapped on an error
+      // screen — the whole point is the app opens for them — so fall through to
+      // the shell; gated actions will prompt them to create an account.
+      error: (e, _) => supabase.auth.currentUser?.isAnonymous == true
+          ? const HomeShell()
+          : _ProfileError(message: e.toString()),
       data: (_) => const HomeShell(),
     );
   }
