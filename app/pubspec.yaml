@@ -47,6 +47,16 @@ dependencies:
   # Lets users attach a photo to a community post (composer). Returns an XFile
   # whose bytes are uploaded to the public 'post-photos' Supabase bucket.
   image_picker: ^1.1.2
+  # Native social sign-in. Both hand a provider ID token to Supabase via
+  # auth.signInWithIdToken (no browser redirect) — see auth_screen.dart.
+  # google_sign_in opens the native Google account picker; sign_in_with_apple
+  # drives the system Sign in with Apple sheet (required by App Store 4.8 since
+  # we also offer Google).
+  google_sign_in: ^6.2.1
+  sign_in_with_apple: ^6.1.3
+  # sign_in_with_apple returns a raw Apple identity token; Supabase needs a
+  # nonce pairing. crypto provides the sha256 used to hash the nonce.
+  crypto: ^3.0.6
 
 dev_dependencies:
   flutter_test:

@@ -20,14 +20,18 @@ final encouragementRepoProvider = Provider((_) => EncouragementRepo());
 
 // Raw Supabase auth event stream. The underlying BehaviorSubject replays the
 // latest state to new listeners, so late subscribers (and the cold-start gate)
-// immediately see the current session.
+// immediately see the current session. In demo mode (backend disabled) Supabase
+// is never initialised, so emit nothing rather than touching Supabase.instance.
 final authStateProvider = StreamProvider<AuthState>((ref) {
+  if (!Env.backendEnabled) return const Stream.empty();
   return supabase.auth.onAuthStateChange;
 });
 
 // The signed-in user's id (uuid), or null. Derived from the auth stream, with a
-// synchronous fallback so there is no null flash on the first frame.
+// synchronous fallback so there is no null flash on the first frame. Null in
+// demo mode (no Supabase instance to read).
 final currentUserIdProvider = Provider<String?>((ref) {
+  if (!Env.backendEnabled) return null;
   ref.watch(authStateProvider);
   return supabase.auth.currentUser?.id;
 });
@@ -146,6 +150,21 @@ final achievementsProvider = FutureProvider<List<Achievement>>((ref) {
   return ref.read(achievementsRepoProvider).all();
 });
 
+// Another user's public profile, by id — used by the map's tap-to-reveal card.
+// profiles are world-readable to authenticated users (RLS: select using true),
+// so this works for any evangelist shown on the map. Cached per id.
+final publicProfileProvider = FutureProvider.family<Profile?, String>((
+  ref,
+  userId,
+) async {
+  if (userId.isEmpty) return null;
+  try {
+    return await ref.read(profileRepoProvider).byId(userId);
+  } catch (_) {
+    return null; // tolerate a missing/unreadable profile — card falls back
+  }
+});
+
 // The current user's home-church membership (null if they haven't joined one).
 final myMembershipProvider = FutureProvider<ChurchMembership?>((ref) {
   ref.watch(authChangedProvider);
@@ -157,4 +176,11 @@ final churchMembersProvider =
     FutureProvider.family<List<ChurchMemberRequest>, String>((ref, churchId) {
   ref.watch(authChangedProvider);
   return ref.read(churchesRepoProvider).memberRequests(churchId);
+});
+
+// Contacts shared with a church the current user manages.
+final churchSharedContactsProvider =
+    FutureProvider.family<List<ChurchSharedContact>, String>((ref, churchId) {
+  ref.watch(authChangedProvider);
+  return ref.read(churchesRepoProvider).sharedContacts(churchId);
 });

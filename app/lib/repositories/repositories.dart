@@ -54,6 +54,7 @@ class _LocalStore {
     'avatar_url': p.avatarUrl,
     'is_visible_on_map': p.isVisibleOnMap,
     'daily_reminder_enabled': p.dailyReminderEnabled,
+    'share_contacts_with_church': p.shareContactsWithChurch,
     'theme': p.theme,
     'current_streak': p.currentStreak,
     'longest_streak': p.longestStreak,
@@ -79,6 +80,10 @@ class _LocalStore {
     'notes': c.notes,
     'next_followup_at': c.nextFollowupAt?.toIso8601String(),
     'tags': c.tags,
+    'visible_to_church': c.visibleToChurch,
+    'met_lat': c.metLat,
+    'met_lng': c.metLng,
+    'created_at': c.createdAt.toIso8601String(),
   };
 }
 
@@ -325,6 +330,7 @@ class ContactsRepo {
         'id': _LocalStore.id('contact'),
         'owner_id': _LocalStore.profile.id,
         'date_met': DateTime.now().toIso8601String(),
+        'created_at': DateTime.now().toIso8601String(),
       });
       _LocalStore.contacts.insert(0, contact);
       return contact;
@@ -858,6 +864,20 @@ class ChurchesRepo {
   Future<void> removeMember(String membershipId) async {
     if (!Env.backendEnabled) return;
     await supabase.rpc('remove_member', params: {'p_membership_id': membershipId});
+  }
+
+  /// Contacts members have opted to share with a church the current user
+  /// manages. Empty if the caller isn't that church's claimant, or if no one
+  /// has shared anyone yet.
+  Future<List<ChurchSharedContact>> sharedContacts(String churchId) async {
+    if (!Env.backendEnabled) return const [];
+    final rows = await supabase.rpc(
+      'church_shared_contacts',
+      params: {'p_church_id': churchId},
+    );
+    return ((rows as List?) ?? const [])
+        .map((e) => ChurchSharedContact.fromMap(Map<String, dynamic>.from(e)))
+        .toList();
   }
 }
 

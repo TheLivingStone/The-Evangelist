@@ -33,6 +33,12 @@ class Env {
     'BACKEND_ENABLED',
   );
   static const _signupSourceDefine = String.fromEnvironment('SIGNUP_SOURCE');
+  static const _googleIosClientIdDefine = String.fromEnvironment(
+    'GOOGLE_IOS_CLIENT_ID',
+  );
+  static const _googleWebClientIdDefine = String.fromEnvironment(
+    'GOOGLE_WEB_CLIENT_ID',
+  );
 
   /// Local development is the default while the product UI is being built.
   static bool get backendEnabled =>
@@ -54,6 +60,28 @@ class Env {
   /// Optional — only needed when the native Google Map is wired up.
   static String get googleMapsApiKey =>
       _read('GOOGLE_MAPS_API_KEY', _googleMapsApiKeyDefine, '');
+
+  /// Native Google sign-in client IDs (both PUBLIC — safe to bundle).
+  ///
+  /// • iOS client ID — created in Google Cloud as an "iOS" OAuth client for the
+  ///   app's bundle id; used as `clientId` so the native picker trusts the app.
+  /// • Web client ID — the "Web application" OAuth client whose ID + secret are
+  ///   pasted into Supabase's Google provider; passed as `serverClientId` so the
+  ///   returned ID token's audience matches what Supabase verifies.
+  ///
+  /// When either is empty the Google button is hidden (see auth_screen.dart),
+  /// so a build without these configured still ships and works with email/Apple.
+  static String get googleIosClientId =>
+      _read('GOOGLE_IOS_CLIENT_ID', _googleIosClientIdDefine, '');
+
+  static String get googleWebClientId =>
+      _read('GOOGLE_WEB_CLIENT_ID', _googleWebClientIdDefine, '');
+
+  /// True only when both Google client IDs are present. The Google button is
+  /// gated on this so a misconfigured build degrades gracefully instead of
+  /// showing a button that always errors.
+  static bool get googleSignInConfigured =>
+      googleIosClientId.isNotEmpty && googleWebClientId.isNotEmpty;
 
   /// Acquisition channel recorded on a user's FIRST sign-in, powering the admin
   /// Growth dashboard's per-campaign breakdown. Ship a campaign build with

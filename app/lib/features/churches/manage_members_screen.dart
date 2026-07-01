@@ -14,6 +14,7 @@ class ManageMembersScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(churchMembersProvider(church.id));
+    final sharedAsync = ref.watch(churchSharedContactsProvider(church.id));
     return Scaffold(
       appBar: AppBar(title: Text('${church.name} · Members')),
       body: async.when(
@@ -41,8 +42,10 @@ class ManageMembersScreen extends ConsumerWidget {
           final pending = members.where((m) => m.isPending).toList();
           final confirmed = members.where((m) => !m.isPending).toList();
           return RefreshIndicator(
-            onRefresh: () async =>
-                ref.invalidate(churchMembersProvider(church.id)),
+            onRefresh: () async {
+              ref.invalidate(churchMembersProvider(church.id));
+              ref.invalidate(churchSharedContactsProvider(church.id));
+            },
             child: ListView(
               padding: const EdgeInsets.all(12),
               children: [
@@ -60,6 +63,46 @@ class ManageMembersScreen extends ConsumerWidget {
                 else
                   ...confirmed
                       .map((m) => _MemberTile(church: church, member: m)),
+                const SizedBox(height: 20),
+                sharedAsync.when(
+                  loading: () => const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _SectionLabel('People shared with your church'),
+                      Padding(
+                        padding: EdgeInsets.all(16),
+                        child: LinearProgressIndicator(),
+                      ),
+                    ],
+                  ),
+                  error: (e, _) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const _SectionLabel('People shared with your church'),
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Text('Could not load shared contacts: $e'),
+                      ),
+                    ],
+                  ),
+                  data: (contacts) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _SectionLabel(
+                        'People shared with your church (${contacts.length})',
+                      ),
+                      if (contacts.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Text(
+                            'No members have shared anyone with your church yet.',
+                          ),
+                        )
+                      else
+                        ...contacts.map((c) => _SharedContactTile(contact: c)),
+                    ],
+                  ),
+                ),
               ],
             ),
           );
@@ -200,3 +243,94 @@ class _MemberTileState extends ConsumerState<_MemberTile> {
     );
   }
 }
+
+class _SharedContactTile extends StatelessWidget {
+  final ChurchSharedContact contact;
+  const _SharedContactTile({required this.contact});
+
+  @override
+  Widget build(BuildContext context) {
+    final muted =
+        Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6);
+    final details = [
+      contact.phone,
+      contact.email,
+    ].where((e) => e != null && e.isNotEmpty).join(' · ');
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    contact.displayName,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                _StatusChip(status: contact.status),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Added by ${contact.ownerName} · ${_fmtDate(contact.dateMet)}',
+              style: TextStyle(fontSize: 12, color: muted),
+            ),
+            if (details.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(details, style: TextStyle(fontSize: 12, color: muted)),
+            ],
+            if ((contact.metLocation ?? '').isNotEmpty) ...[
+              const SizedBox(height: 2),
+              Text(
+                'Met at ${contact.metLocation}',
+                style: TextStyle(fontSize: 12, color: muted),
+              ),
+            ],
+            if ((contact.notes ?? '').isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                contact.notes!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                  color: muted,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  final String status;
+  const _StatusChip({required this.status});
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppColors.accent.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        prettyStatus(status),
+        style: const TextStyle(
+          color: AppColors.accent2,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+String _fmtDate(DateTime d) =>
+    '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';

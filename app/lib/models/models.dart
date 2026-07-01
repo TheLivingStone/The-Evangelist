@@ -13,6 +13,7 @@ class Profile {
   final String? avatarUrl;
   final bool isVisibleOnMap;
   final bool dailyReminderEnabled;
+  final bool shareContactsWithChurch;
   final String theme;
   final int currentStreak;
   final int longestStreak;
@@ -34,6 +35,7 @@ class Profile {
     this.avatarUrl,
     this.isVisibleOnMap = true,
     this.dailyReminderEnabled = true,
+    this.shareContactsWithChurch = false,
     this.theme = 'dark',
     this.currentStreak = 0,
     this.longestStreak = 0,
@@ -56,6 +58,7 @@ class Profile {
     avatarUrl: m['avatar_url'],
     isVisibleOnMap: m['is_visible_on_map'] ?? true,
     dailyReminderEnabled: m['daily_reminder_enabled'] ?? true,
+    shareContactsWithChurch: m['share_contacts_with_church'] ?? false,
     theme: m['theme'] ?? 'dark',
     currentStreak: m['current_streak'] ?? 0,
     longestStreak: m['longest_streak'] ?? 0,
@@ -99,6 +102,10 @@ class Contact {
   final String? notes;
   final DateTime? nextFollowupAt;
   final List<String> tags;
+  final bool visibleToChurch;
+  final double? metLat;
+  final double? metLng;
+  final DateTime createdAt;
 
   Contact({
     required this.id,
@@ -114,6 +121,10 @@ class Contact {
     this.notes,
     this.nextFollowupAt,
     this.tags = const [],
+    this.visibleToChurch = false,
+    this.metLat,
+    this.metLng,
+    required this.createdAt,
   });
 
   String get displayName =>
@@ -133,6 +144,10 @@ class Contact {
     notes: m['notes'],
     nextFollowupAt: _date(m['next_followup_at']),
     tags: (m['tags'] as List?)?.map((e) => e.toString()).toList() ?? [],
+    visibleToChurch: m['visible_to_church'] ?? false,
+    metLat: (m['met_lat'] as num?)?.toDouble(),
+    metLng: (m['met_lng'] as num?)?.toDouble(),
+    createdAt: _date(m['created_at']) ?? DateTime.now(),
   );
 }
 
@@ -463,5 +478,62 @@ class ChurchMemberRequest {
         status: m['status'] ?? 'pending',
         totalSalvations: (m['total_salvations'] as num?)?.toInt() ?? 0,
         totalConversations: (m['total_conversations'] as num?)?.toInt() ?? 0,
+      );
+}
+
+/// A contact a member has opted to share with a church they belong to
+/// (church_shared_contacts RPC) — shown to that church's claimant.
+class ChurchSharedContact {
+  final String contactId;
+  final String ownerId;
+  final String ownerName;
+  final String firstName;
+  final String? lastName;
+  final String? phone;
+  final String? email;
+  final String? city;
+  final String? metLocation;
+  final DateTime dateMet;
+  final String status;
+  final String? notes;
+  final DateTime? nextFollowupAt;
+  final DateTime addedAt;
+
+  ChurchSharedContact({
+    required this.contactId,
+    required this.ownerId,
+    required this.ownerName,
+    required this.firstName,
+    this.lastName,
+    this.phone,
+    this.email,
+    this.city,
+    this.metLocation,
+    required this.dateMet,
+    this.status = 'new_contact',
+    this.notes,
+    this.nextFollowupAt,
+    required this.addedAt,
+  });
+
+  String get displayName =>
+      [firstName, lastName].where((e) => e != null && e.isNotEmpty).join(' ');
+
+  factory ChurchSharedContact.fromMap(Map<String, dynamic> m) =>
+      ChurchSharedContact(
+        contactId: m['contact_id'].toString(),
+        ownerId: m['owner_id'].toString(),
+        ownerName: m['owner_name'] ?? 'A member',
+        firstName: m['first_name'],
+        lastName: m['last_name'],
+        phone: m['phone'],
+        email: m['email'],
+        city: m['city'],
+        metLocation: m['met_location'],
+        dateMet: _date(m['date_met']) ?? DateTime.now(),
+        status: m['status'] ?? 'new_contact',
+        notes: m['notes'],
+        nextFollowupAt: _date(m['next_followup_at']),
+        addedAt: _date(m['added_at']) ?? DateTime.now(),
       );
 }

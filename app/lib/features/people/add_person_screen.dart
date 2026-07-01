@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../core/providers.dart';
 import '../../models/models.dart';
 
@@ -19,6 +20,7 @@ class _AddPersonScreenState extends ConsumerState<AddPersonScreen> {
   String _status = 'new_contact';
   DateTime? _nextFollowup = DateTime.now().add(const Duration(days: 1));
   bool _busy = false;
+  bool? _shareOverride;
 
   @override
   void dispose() {
@@ -31,6 +33,32 @@ class _AddPersonScreenState extends ConsumerState<AddPersonScreen> {
     super.dispose();
   }
 
+  /// Best-effort GPS fix at the moment of saving, so a contact silently
+  /// remembers where it was created. Never blocks or errors the save —
+  /// permission denied / services off / timeout all just mean no location.
+  Future<(double, double)?> _captureLocation() async {
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) return null;
+      var perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.denied) {
+        perm = await Geolocator.requestPermission();
+      }
+      if (perm == LocationPermission.denied ||
+          perm == LocationPermission.deniedForever) {
+        return null;
+      }
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.medium,
+          timeLimit: Duration(seconds: 15),
+        ),
+      );
+      return (pos.latitude, pos.longitude);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _save() async {
     if (_first.text.trim().isEmpty) {
       ScaffoldMessenger.of(
@@ -40,6 +68,13 @@ class _AddPersonScreenState extends ConsumerState<AddPersonScreen> {
     }
     setState(() => _busy = true);
     try {
+      final confirmedChurch =
+          ref.read(myMembershipProvider).value?.isConfirmed == true;
+      final shareWithChurch =
+          _shareOverride ??
+          ref.read(myProfileProvider).value?.shareContactsWithChurch ??
+          false;
+      final location = await _captureLocation();
       await ref.read(contactsRepoProvider).add({
         'first_name': _first.text.trim(),
         if (_last.text.trim().isNotEmpty) 'last_name': _last.text.trim(),
@@ -50,6 +85,9 @@ class _AddPersonScreenState extends ConsumerState<AddPersonScreen> {
         'status': _status,
         if (_nextFollowup != null)
           'next_followup_at': _nextFollowup!.toIso8601String().substring(0, 10),
+        if (confirmedChurch && shareWithChurch) 'visible_to_church': true,
+        if (location != null) 'met_lat': location.$1,
+        if (location != null) 'met_lng': location.$2,
       });
       ref.invalidate(contactsListProvider);
       ref.invalidate(dueFollowupsProvider);
@@ -67,6 +105,11 @@ class _AddPersonScreenState extends ConsumerState<AddPersonScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final membership = ref.watch(myMembershipProvider).value;
+    final profile = ref.watch(myProfileProvider).value;
+    final canShareWithChurch = membership?.isConfirmed == true;
+    final shareWithChurch =
+        _shareOverride ?? profile?.shareContactsWithChurch ?? false;
     return Scaffold(
       appBar: AppBar(title: const Text('Add Person')),
       body: ListView(
@@ -110,6 +153,19 @@ class _AddPersonScreenState extends ConsumerState<AddPersonScreen> {
             },
           ),
           _field(_notes, 'Notes (what happened)', maxLines: 3),
+          if (canShareWithChurch) ...[
+            const SizedBox(height: 4),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Share with my church'),
+              subtitle: Text(
+                '${membership!.churchName} will be able to see this '
+                "person's info to follow up.",
+              ),
+              value: shareWithChurch,
+              onChanged: (v) => setState(() => _shareOverride = v),
+            ),
+          ],
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: _busy ? null : _save,

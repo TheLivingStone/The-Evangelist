@@ -246,6 +246,7 @@ class _SettingsCardState extends ConsumerState<_SettingsCard> {
   late bool _dark = widget.profile.theme == 'dark';
   late bool _visible = widget.profile.isVisibleOnMap;
   late bool _reminders = widget.profile.dailyReminderEnabled;
+  late bool _shareContacts = widget.profile.shareContactsWithChurch;
   final _saving = <String>{};
 
   @override
@@ -257,6 +258,9 @@ class _SettingsCardState extends ConsumerState<_SettingsCard> {
     }
     if (!_saving.contains('daily_reminder_enabled')) {
       _reminders = widget.profile.dailyReminderEnabled;
+    }
+    if (!_saving.contains('share_contacts_with_church')) {
+      _shareContacts = widget.profile.shareContactsWithChurch;
     }
   }
 
@@ -301,6 +305,8 @@ class _SettingsCardState extends ConsumerState<_SettingsCard> {
 
   @override
   Widget build(BuildContext context) {
+    final confirmedChurch =
+        ref.watch(myMembershipProvider).value?.isConfirmed == true;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(8),
@@ -345,6 +351,24 @@ class _SettingsCardState extends ConsumerState<_SettingsCard> {
                       apply: (value) => _reminders = value,
                     ),
             ),
+            if (confirmedChurch)
+              SwitchListTile(
+                title: const Text('Share new contacts with my church'),
+                subtitle: const Text(
+                  'New people you add default to shared with your church — '
+                  'you can override this per person.',
+                ),
+                value: _shareContacts,
+                activeThumbColor: AppColors.accent,
+                onChanged: _saving.contains('share_contacts_with_church')
+                    ? null
+                    : (v) => _persist(
+                        key: 'share_contacts_with_church',
+                        value: v,
+                        oldValue: _shareContacts,
+                        apply: (value) => _shareContacts = value,
+                      ),
+              ),
             // Account deletion is required by Apple (Guideline 5.1.1(v)) for any
             // app with accounts. Hidden in demo mode and for guests (a guest has
             // no real account — they can just sign out / reinstall).

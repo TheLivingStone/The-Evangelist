@@ -1,5 +1,94 @@
 import 'package:flutter/material.dart';
 
+/// Shared spacing, radius, and surface tokens for the "Bold Refined" design
+/// direction: one bold orange moment (the streak), everything else calm and
+/// spacious with hairline borders. Screens compose these instead of hard-coding
+/// magic numbers, which is what keeps the whole app visually consistent.
+class Dims {
+  // 4-pt spacing scale. Use these for gaps/padding everywhere.
+  static const double xs = 4;
+  static const double s = 8;
+  static const double m = 12;
+  static const double l = 16;
+  static const double xl = 20;
+  static const double xxl = 28;
+
+  // Corner radii. Cards are soft but not pill-round.
+  static const double rSm = 12;
+  static const double rMd = 16;
+  static const double rLg = 18;
+  static const double rPill = 999;
+
+  // Hairline border — the signature of the refined half of the system. Kept at
+  // ~0.6px so it reads as a crisp edge on retina, not a heavy frame.
+  static const double hairline = 0.6;
+
+  /// The hairline border colour for the current brightness.
+  static Color border(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+      ? Colors.white.withValues(alpha: 0.08)
+      : const Color(0xFFE6E6DF);
+
+  /// A muted on-surface colour for secondary text, theme-aware.
+  static Color muted(BuildContext context) =>
+      Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55);
+}
+
+/// Reusable building blocks for the Bold Refined look. Static so any screen can
+/// call e.g. `Surfaces.card(context, child: ...)` and get a consistent
+/// hairline-bordered container without repeating decoration boilerplate.
+class Surfaces {
+  /// The standard hairline-bordered surface card (the calm/“B” container).
+  static Widget card(
+    BuildContext context, {
+    required Widget child,
+    EdgeInsetsGeometry padding = const EdgeInsets.all(Dims.l),
+    VoidCallback? onTap,
+  }) {
+    final decorated = Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(Dims.rMd),
+        border: Border.all(color: Dims.border(context), width: Dims.hairline),
+      ),
+      padding: padding,
+      child: child,
+    );
+    if (onTap == null) return decorated;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(Dims.rMd),
+        onTap: onTap,
+        child: decorated,
+      ),
+    );
+  }
+
+  /// A small all-caps section label, e.g. "TUESDAY · JUNE 25".
+  static Widget overline(BuildContext context, String text) => Text(
+    text.toUpperCase(),
+    style: TextStyle(
+      fontSize: 11,
+      fontWeight: FontWeight.w600,
+      letterSpacing: 0.6,
+      color: Dims.muted(context),
+    ),
+  );
+
+  /// A leading rounded "icon chip" used in grouped action rows.
+  static Widget iconChip(BuildContext context, IconData icon, Color tint) =>
+      Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: tint.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(Dims.rSm),
+        ),
+        child: Icon(icon, size: 18, color: tint),
+      );
+}
+
 /// The Evangelist brand theme. Colors come from Product.md / prototype.html.
 /// Mission · Movement · Boldness · Action — dark-first, orange accent.
 class AppColors {
@@ -65,12 +154,14 @@ class AppTheme {
       cardTheme: CardThemeData(
         color: surface,
         elevation: 0,
+        margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(Dims.rMd),
           side: BorderSide(
             color: dark
-                ? Colors.white.withValues(alpha: 0.07)
-                : const Color(0xFFECECE6),
+                ? Colors.white.withValues(alpha: 0.08)
+                : const Color(0xFFE6E6DF),
+            width: Dims.hairline,
           ),
         ),
       ),

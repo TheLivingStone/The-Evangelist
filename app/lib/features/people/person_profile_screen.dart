@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:latlong2/latlong.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../../models/models.dart';
@@ -32,6 +35,10 @@ class _PersonProfileScreenState extends ConsumerState<PersonProfileScreen> {
           'next_followup_at':
               c.nextFollowupAt?.toIso8601String().substring(0, 10),
           'tags': c.tags,
+          'visible_to_church': c.visibleToChurch,
+          'met_lat': c.metLat,
+          'met_lng': c.metLng,
+          'created_at': c.createdAt.toIso8601String(),
         }));
     // connecting to church is itself an outreach activity
     if (s == 'connected_to_church') {
@@ -103,9 +110,15 @@ class _PersonProfileScreenState extends ConsumerState<PersonProfileScreen> {
                   if (c.email != null) _row(Icons.email, c.email!),
                   if (c.metLocation != null)
                     _row(Icons.place, 'Met at ${c.metLocation}'),
-                  _row(Icons.event,
-                      'Met ${c.dateMet.toIso8601String().substring(0, 10)}'),
+                  _row(
+                    Icons.event,
+                    'Met ${DateFormat("MMM d, yyyy 'at' h:mm a").format(c.createdAt)}',
+                  ),
                   if (c.notes != null) _row(Icons.notes, c.notes!),
+                  if (c.metLat != null && c.metLng != null) ...[
+                    const SizedBox(height: 8),
+                    _MetLocationMap(lat: c.metLat!, lng: c.metLng!),
+                  ],
                 ],
               ),
             ),
@@ -162,4 +175,59 @@ class _PersonProfileScreenState extends ConsumerState<PersonProfileScreen> {
           Expanded(child: Text(text)),
         ]),
       );
+}
+
+/// A small, mostly-static map pinning where a contact was met — a quiet
+/// visual reminder alongside the free-text "met at" description. Reuses the
+/// same CARTO dark tiles as the live map screen.
+class _MetLocationMap extends StatelessWidget {
+  final double lat;
+  final double lng;
+  const _MetLocationMap({required this.lat, required this.lng});
+
+  @override
+  Widget build(BuildContext context) {
+    final point = LatLng(lat, lng);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: SizedBox(
+        height: 160,
+        child: Stack(
+          children: [
+            Container(color: const Color(0xFF05060A)),
+            FlutterMap(
+              options: MapOptions(initialCenter: point, initialZoom: 14),
+              children: [
+                TileLayer(
+                  urlTemplate:
+                      'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.theevangelist.the_evangelist',
+                ),
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: point,
+                      width: 26,
+                      height: 26,
+                      child: const Icon(
+                        Icons.place,
+                        color: AppColors.accent,
+                        size: 26,
+                      ),
+                    ),
+                  ],
+                ),
+                const RichAttributionWidget(
+                  showFlutterMapAttribution: false,
+                  attributions: [
+                    TextSourceAttribution('© OpenStreetMap, © CARTO'),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

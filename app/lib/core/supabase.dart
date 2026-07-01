@@ -18,4 +18,11 @@ Future<void> initSupabase() async {
 /// The current user's id (a uuid from Supabase Auth), or null when signed out.
 /// Every repository writes this as owner_id / user_id / author_id, and RLS
 /// matches it against auth.uid().
-String? get currentUserId => Supabase.instance.client.auth.currentUser?.id;
+///
+/// Returns null when Supabase was never initialised (e.g. demo mode with
+/// BACKEND_ENABLED=false), instead of throwing — callers already treat a null
+/// id as "signed out".
+String? get currentUserId {
+  if (!Supabase.instance.isInitialized) return null;
+  return Supabase.instance.client.auth.currentUser?.id;
+}

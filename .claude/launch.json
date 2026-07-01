@@ -21,6 +21,21 @@
       ],
       "cwd": "app",
       "port": 8080
+    },
+    {
+      "name": "flutter-app-demo",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": [
+        "run",
+        "-d",
+        "web-server",
+        "--web-port",
+        "8081",
+        "--dart-define",
+        "BACKEND_ENABLED=false"
+      ],
+      "cwd": "app",
+      "port": 8081
     }
   ]
 }

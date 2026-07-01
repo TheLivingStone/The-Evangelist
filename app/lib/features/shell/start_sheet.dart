@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/auth_account.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../people/people_screen.dart';
@@ -47,6 +48,8 @@ class StartSheet extends ConsumerWidget {
             'Start Outreach Session',
             'Begin a timed session',
             () async {
+              if (!await requireAccount(context, ref)) return;
+              if (!context.mounted) return;
               final navigator = Navigator.of(context);
               final messenger = ScaffoldMessenger.of(context);
               navigator.pushReplacement(
@@ -76,7 +79,9 @@ class StartSheet extends ConsumerWidget {
             AppColors.blue,
             'Add Person',
             'Save someone you met',
-            () {
+            () async {
+              if (!await requireAccount(context, ref)) return;
+              if (!context.mounted) return;
               final navigator = Navigator.of(context);
               navigator.pop();
               navigator.push(
@@ -115,7 +120,9 @@ class StartSheet extends ConsumerWidget {
             AppColors.pink,
             'Create Testimony Post',
             'Share what God did',
-            () {
+            () async {
+              if (!await requireAccount(context, ref)) return;
+              if (!context.mounted) return;
               final navigator = Navigator.of(context);
               navigator.pop();
               navigator.push(
@@ -148,6 +155,8 @@ class StartSheet extends ConsumerWidget {
     String type,
     String msg,
   ) async {
+    if (!await requireAccount(context, ref)) return;
+    if (!context.mounted) return;
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     navigator.pop();
