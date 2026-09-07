@@ -1,6 +1,6 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../core/glass.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/auth_account.dart';
@@ -44,12 +44,36 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
     super.dispose();
   }
 
-  Future<void> _pickPhoto() async {
-    final picked = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1600,
-      imageQuality: 85,
-    );
+  /// Attach a photo — straight from the camera (in-app, no app switch) or
+  /// from the library. Camera capture is the primary path: you're out on the
+  /// street, something happens, you shoot it and post.
+  Future<void> _pickPhoto(ImageSource source) async {
+    final XFile? picked;
+    try {
+      picked = await ImagePicker().pickImage(
+        source: source,
+        preferredCameraDevice: CameraDevice.rear,
+        maxWidth: 1600,
+        imageQuality: 85,
+      );
+    } on PlatformException catch (e) {
+      if (!mounted) return;
+      final denied =
+          e.code == 'camera_access_denied' || e.code == 'photo_access_denied';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            denied
+                ? 'Allow ${source == ImageSource.camera ? 'camera' : 'photo'} '
+                      'access in Settings to attach a photo.'
+                : source == ImageSource.camera
+                ? 'The camera isn\'t available on this device.'
+                : 'Could not open your photos.',
+          ),
+        ),
+      );
+      return;
+    }
     if (picked == null) return;
     final bytes = await picked.readAsBytes();
     final ext = picked.name.contains('.')
@@ -108,7 +132,7 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      appBar: GlassAppBar(
         title: const Text('Share what God did'),
         actions: [
           TextButton(
@@ -188,16 +212,36 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
               ),
             ],
             const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: _busy ? null : _pickPhoto,
-                icon: const Icon(Icons.image_outlined, color: AppColors.accent),
-                label: Text(
-                  _photoBytes == null ? 'Add photo' : 'Change photo',
-                  style: const TextStyle(color: AppColors.accent),
+            Row(
+              children: [
+                TextButton.icon(
+                  onPressed: _busy
+                      ? null
+                      : () => _pickPhoto(ImageSource.camera),
+                  icon: const Icon(
+                    Icons.photo_camera_outlined,
+                    color: AppColors.accent,
+                  ),
+                  label: Text(
+                    _photoBytes == null ? 'Take photo' : 'Retake',
+                    style: const TextStyle(color: AppColors.accent),
+                  ),
                 ),
-              ),
+                const SizedBox(width: 4),
+                TextButton.icon(
+                  onPressed: _busy
+                      ? null
+                      : () => _pickPhoto(ImageSource.gallery),
+                  icon: const Icon(
+                    Icons.image_outlined,
+                    color: AppColors.accent,
+                  ),
+                  label: Text(
+                    _photoBytes == null ? 'Library' : 'Change',
+                    style: const TextStyle(color: AppColors.accent),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

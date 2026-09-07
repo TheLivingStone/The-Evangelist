@@ -1,14 +1,14 @@
-# Privacy Policy — The Evangelist
+# Privacy Policy — Go and Tell
 
 _Last updated: July 1, 2026_
 
-The Evangelist ("the app", "we", "us") helps believers track and share their
+Go and Tell ("the app", "we", "us") helps believers track and share their
 evangelism and outreach. This policy explains what we collect, why, and your
 choices. If you have questions, contact us at **cjctechgrace@gmail.com**.
 
 ## Who runs this app
 
-The Evangelist is operated by Oliyad Deyasa.
+Go and Tell is operated by Oliyad Deyasa.
 Our backend is hosted on Supabase, which stores your data securely on our behalf.
 
 ## What we collect

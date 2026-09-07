@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Environment configuration.
@@ -40,9 +41,15 @@ class Env {
     'GOOGLE_WEB_CLIENT_ID',
   );
 
-  /// Local development is the default while the product UI is being built.
+  /// Debug builds default to local/demo mode while the UI is being built.
+  /// Release builds default to the real backend, so a device build made
+  /// without a bundled .env can never ship as a demo app with no sign-in.
   static bool get backendEnabled =>
-      _read('BACKEND_ENABLED', _backendEnabledDefine, 'false').toLowerCase() ==
+      _read(
+        'BACKEND_ENABLED',
+        _backendEnabledDefine,
+        kReleaseMode ? 'true' : 'false',
+      ).toLowerCase() ==
       'true';
 
   static String get supabaseUrl => _read(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/glass.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
@@ -27,7 +28,7 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
   Widget build(BuildContext context) {
     final contacts = ref.watch(contactsListProvider(_filter));
     return Scaffold(
-      appBar: AppBar(title: const Text('My People')),
+      appBar: GlassAppBar(title: const Text('My People')),
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.accent,
         onPressed: () async {

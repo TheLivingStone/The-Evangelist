@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/auth_account.dart';
+import '../../core/glass.dart';
 import '../../core/theme.dart';
 import '../../core/providers.dart';
 import '../dashboard/dashboard_screen.dart';
@@ -10,6 +11,7 @@ import '../community/community_screen.dart';
 import '../map/map_screen.dart';
 import '../profile/profile_screen.dart';
 import 'start_sheet.dart';
+import '../../core/coach_marks.dart';
 
 class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key});
@@ -39,6 +41,20 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       if (!mounted) return;
       ref.read(allFeedProvider.future).ignore();
     });
+    // First-run coach mark on the one button that matters. Shows once.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      CoachMarks.show(
+        context,
+        id: 'plus',
+        target: CoachTargets.plusButton,
+        title: 'Start here',
+        text:
+            'Tap + whenever you share your faith: log a conversation or a '
+            'prayer, or save the person you met.',
+        delay: const Duration(milliseconds: 900),
+      );
+    });
   }
 
   @override
@@ -52,50 +68,84 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.45),
       builder: (_) => const StartSheet(),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
     return Scaffold(
-      body: IndexedStack(
-        index: _index,
-        children: List.generate(
-          _screens.length,
-          (i) => _loadedTabs.contains(i)
-              ? RepaintBoundary(child: _screens[i])
-              : const SizedBox.shrink(),
+      // Tab screens paint on transparent so the ambient ground shows through
+      // the glass layer; content scrolls beneath the floating bar.
+      extendBody: true,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          const AmbientBackground(),
+          IndexedStack(
+            index: _index,
+            children: List.generate(
+              _screens.length,
+              (i) => _loadedTabs.contains(i)
+                  ? RepaintBoundary(child: _screens[i])
+                  : const SizedBox.shrink(),
+            ),
+          ),
+        ],
+      ),
+      // Liquid Glass navigation: a floating capsule tab bar with the primary
+      // action as its own button beside it (the iOS 26 tab bar + action
+      // button arrangement), lifted off the home indicator.
+      bottomNavigationBar: Padding(
+        padding: EdgeInsets.fromLTRB(
+          Dims.l,
+          Dims.s,
+          Dims.l,
+          bottomInset > 0 ? bottomInset - 4 : Dims.m,
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openStart,
-        backgroundColor: AppColors.accent,
-        elevation: 4,
-        shape: const CircleBorder(),
-        child: const Icon(Icons.add, color: Colors.white, size: 32),
-      ),
-      // Drop the button down so it sits level with the nav icons rather than
-      // floating high over the notch. _DockedDown nudges the standard docked
-      // anchor downward; pair it with a small notchMargin below.
-      floatingActionButtonLocation: const _DockedDown(),
-      bottomNavigationBar: BottomAppBar(
-        // Grow the bar with the user's text size so the icon+label column never
-        // overflows (the default 64 overflowed at larger Dynamic Type sizes).
-        height: 58 + 14 * MediaQuery.textScalerOf(context).scale(1),
-        padding: EdgeInsets.zero,
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 5,
-        color: Theme.of(context).colorScheme.surface,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _navItem(0, Icons.dashboard_outlined, Icons.dashboard, 'Home'),
-            _navItem(1, Icons.groups_outlined, Icons.groups, 'Community'),
-            const SizedBox(width: 40),
-            _navItem(3, Icons.map_outlined, Icons.map, 'Map'),
-            _navItem(4, Icons.person_outline, Icons.person, 'Profile'),
-          ],
+        child: Center(
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Row(
+              children: [
+                Expanded(
+                  child: GlassCapsule(
+                    child: SizedBox(
+                      height: 60,
+                      child: Row(
+                        children: [
+                          _navItem(
+                            0,
+                            Icons.dashboard_outlined,
+                            Icons.dashboard,
+                            'Home',
+                          ),
+                          _navItem(
+                            1,
+                            Icons.groups_outlined,
+                            Icons.groups,
+                            'Community',
+                          ),
+                          _navItem(3, Icons.map_outlined, Icons.map, 'Map'),
+                          _navItem(
+                            4,
+                            Icons.person_outline,
+                            Icons.person,
+                            'Profile',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: Dims.m),
+                _ActionButton(key: CoachTargets.plusButton, onTap: _openStart),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -122,7 +172,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     return Expanded(
       child: InkWell(
         onTap: () => _selectTab(i),
-        borderRadius: BorderRadius.circular(12),
+        customBorder: const StadiumBorder(),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
           child: Column(
@@ -146,24 +196,45 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   }
 }
 
-/// Centre-docked FAB nudged downward so it rests level with the bottom-nav
-/// icons instead of floating high over the notch. Delegates horizontal centring
-/// to the standard docked location and only shifts the vertical anchor down.
-class _DockedDown extends FloatingActionButtonLocation {
-  const _DockedDown();
-
-  /// How far below the standard docked position to drop the button.
-  static const double _dropY = 18;
-
+/// The primary "what happened today?" action: accent glass circle with a soft
+/// glow — the one bold moment in the navigation layer.
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({super.key, required this.onTap});
+  final VoidCallback onTap;
   @override
-  Offset getOffset(ScaffoldPrelayoutGeometry scaffoldGeometry) {
-    final base = FloatingActionButtonLocation.centerDocked.getOffset(
-      scaffoldGeometry,
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Log what happened today',
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.accent.withValues(alpha: 0.45),
+              blurRadius: 22,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Glass(
+          shape: const CircleBorder(),
+          tint: AppColors.accent,
+          shadow: false,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: onTap,
+              child: const SizedBox(
+                width: 60,
+                height: 60,
+                child: Icon(Icons.add_rounded, color: Colors.white, size: 32),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
-    // Clamp so the button can never sink below the screen on short bars.
-    final maxY =
-        scaffoldGeometry.scaffoldSize.height -
-        scaffoldGeometry.floatingActionButtonSize.height;
-    return Offset(base.dx, (base.dy + _dropY).clamp(0.0, maxY));
   }
 }

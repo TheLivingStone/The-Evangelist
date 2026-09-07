@@ -48,7 +48,7 @@ The same `security definer` pattern powers `nearby_churches()` and `area_stats()
 - **Providers:** Email/password, **Google**, and **Apple** (Apple Sign-In is *required* by App Store review when other social logins are offered).
 - **Profile bootstrap:** the `handle_new_user` trigger (in `schema.sql`) creates a `profiles` row automatically on signup, seeding `full_name`/`username` from the auth metadata.
 - **JWT:** default Supabase JWT; `auth.uid()` and `auth.jwt()` are available inside policies and functions.
-- **Email verification / password reset:** use Supabase's built-in flows; customise templates with The Evangelist branding.
+- **Email verification / password reset:** use Supabase's built-in flows; customise templates with Go and Tell branding.
 - **Deep links:** configure the app's redirect URL scheme for OAuth and magic-link callbacks.
 
 ### Implementation status & history (as of 2026-06-21)

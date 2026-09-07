@@ -17,6 +17,7 @@ final mapRepoProvider = Provider((_) => MapRepo());
 final churchesRepoProvider = Provider((_) => ChurchesRepo());
 final achievementsRepoProvider = Provider((_) => AchievementsRepo());
 final encouragementRepoProvider = Provider((_) => EncouragementRepo());
+final moderationRepoProvider = Provider((_) => ModerationRepo());
 
 // Raw Supabase auth event stream. The underlying BehaviorSubject replays the
 // latest state to new listeners, so late subscribers (and the cold-start gate)
@@ -135,6 +136,13 @@ final feedProvider = FutureProvider.family<List<Post>, String?>((
   return posts.where((post) => post.type == type).toList(growable: false);
 });
 
+// Accounts the current user has blocked (App Store Guideline 1.2). Watched by
+// the Blocked accounts screen; invalidated after block/unblock.
+final blockedProfilesProvider = FutureProvider<List<Profile>>((ref) {
+  ref.watch(authChangedProvider);
+  return ref.read(moderationRepoProvider).blockedProfiles();
+});
+
 // Comment thread for a single post.
 final commentsProvider = FutureProvider.family<List<Comment>, String>((
   ref,
@@ -174,13 +182,13 @@ final myMembershipProvider = FutureProvider<ChurchMembership?>((ref) {
 // Members (pending first) of a church the current user manages.
 final churchMembersProvider =
     FutureProvider.family<List<ChurchMemberRequest>, String>((ref, churchId) {
-  ref.watch(authChangedProvider);
-  return ref.read(churchesRepoProvider).memberRequests(churchId);
-});
+      ref.watch(authChangedProvider);
+      return ref.read(churchesRepoProvider).memberRequests(churchId);
+    });
 
 // Contacts shared with a church the current user manages.
 final churchSharedContactsProvider =
     FutureProvider.family<List<ChurchSharedContact>, String>((ref, churchId) {
-  ref.watch(authChangedProvider);
-  return ref.read(churchesRepoProvider).sharedContacts(churchId);
-});
+      ref.watch(authChangedProvider);
+      return ref.read(churchesRepoProvider).sharedContacts(churchId);
+    });

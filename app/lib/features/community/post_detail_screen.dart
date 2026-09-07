@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/glass.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/auth_account.dart';
 import '../../core/providers.dart';
@@ -6,6 +7,7 @@ import '../../core/theme.dart';
 import '../../models/models.dart';
 import 'community_screen.dart' show ReactionChip;
 import 'post_photo.dart';
+import 'moderation.dart';
 
 /// Full view of a single post: header, body, optional photo, reactions, and
 /// the comment thread with an inline composer at the bottom.
@@ -100,7 +102,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     final post = widget.post;
     final comments = ref.watch(commentsProvider(post.id));
     return Scaffold(
-      appBar: AppBar(title: const Text('Post')),
+      appBar: GlassAppBar(title: const Text('Post')),
       body: Column(
         children: [
           Expanded(
@@ -214,12 +216,12 @@ class _PostHeader extends StatelessWidget {
   }
 }
 
-class _CommentTile extends StatelessWidget {
+class _CommentTile extends ConsumerWidget {
   final Comment comment;
   const _CommentTile({required this.comment});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final name = comment.author?.fullName ?? 'Evangelist';
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -229,7 +231,10 @@ class _CommentTile extends StatelessWidget {
           CircleAvatar(
             radius: 16,
             backgroundColor: AppColors.accent.withValues(alpha: 0.2),
-            child: Text(name.characters.first, style: const TextStyle(fontSize: 13)),
+            child: Text(
+              name.characters.first,
+              style: const TextStyle(fontSize: 13),
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -246,6 +251,18 @@ class _CommentTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(comment.body),
               ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.more_horiz, size: 18),
+            tooltip: 'Report or block',
+            visualDensity: VisualDensity.compact,
+            onPressed: () => showModerationSheet(
+              context,
+              ref,
+              commentId: comment.id,
+              authorId: comment.authorId,
+              authorName: name,
             ),
           ),
         ],
@@ -269,12 +286,7 @@ class _CommentComposer extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: EdgeInsets.only(
-          left: 12,
-          right: 12,
-          bottom: 8,
-          top: 8,
-        ),
+        padding: EdgeInsets.only(left: 12, right: 12, bottom: 8, top: 8),
         child: Row(
           children: [
             Expanded(

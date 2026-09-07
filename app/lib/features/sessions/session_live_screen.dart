@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../core/glass.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
@@ -90,7 +91,7 @@ class _SessionLiveScreenState extends ConsumerState<SessionLiveScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.dBg,
-      appBar: AppBar(
+      appBar: GlassAppBar(
         backgroundColor: AppColors.dBg,
         foregroundColor: Colors.white,
         title: const Text('Outreach Live'),

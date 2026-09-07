@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'glass.dart';
 import 'providers.dart';
 import 'supabase.dart';
 import 'theme.dart';
@@ -154,7 +155,9 @@ class _UpgradeAccountSheetState extends ConsumerState<_UpgradeAccountSheet> {
             UserAttributes(data: {'full_name': fullName}),
           );
           await ref.read(profileRepoProvider).update({'full_name': fullName});
-        } catch (_) {/* non-fatal */}
+        } catch (_) {
+          /* non-fatal */
+        }
       }
       ref.invalidate(myProfileProvider);
       if (mounted) Navigator.of(context).pop(true);
@@ -183,40 +186,16 @@ class _UpgradeAccountSheetState extends ConsumerState<_UpgradeAccountSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final surface = Theme.of(context).colorScheme.surface;
     return Padding(
       // Lift above the keyboard.
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: surface,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(24),
-          ),
-        ),
-        padding: const EdgeInsets.fromLTRB(
-          Dims.xl,
-          Dims.m,
-          Dims.xl,
-          Dims.xxl,
-        ),
+      child: GlassSheet(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Dims.muted(context).withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: Dims.l),
             // Accent badge — keeps the Bold Refined identity.
             Center(
               child: Container(
@@ -247,19 +226,35 @@ class _UpgradeAccountSheetState extends ConsumerState<_UpgradeAccountSheet> {
               style: TextStyle(fontSize: 13, color: Dims.muted(context)),
             ),
             const SizedBox(height: Dims.xl),
-            _field(_name, 'Full name', Icons.person_outline_rounded,
-                cap: TextCapitalization.words),
+            _field(
+              _name,
+              'Full name',
+              Icons.person_outline_rounded,
+              cap: TextCapitalization.words,
+            ),
             const SizedBox(height: Dims.m),
-            _field(_email, 'Email', Icons.mail_outline_rounded,
-                keyboard: TextInputType.emailAddress, autocorrect: false),
+            _field(
+              _email,
+              'Email',
+              Icons.mail_outline_rounded,
+              keyboard: TextInputType.emailAddress,
+              autocorrect: false,
+            ),
             const SizedBox(height: Dims.m),
-            _field(_password, 'Password', Icons.lock_outline_rounded,
-                obscure: true),
+            _field(
+              _password,
+              'Password',
+              Icons.lock_outline_rounded,
+              obscure: true,
+            ),
             if (_error != null) ...[
               const SizedBox(height: Dims.m),
               Text(
                 _error!,
-                style: const TextStyle(fontSize: 12.5, color: Color(0xFFE5484D)),
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  color: Color(0xFFE5484D),
+                ),
               ),
             ],
             const SizedBox(height: Dims.xl),
@@ -290,9 +285,13 @@ class _UpgradeAccountSheetState extends ConsumerState<_UpgradeAccountSheet> {
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: Dims.m),
-                    child: Text('or',
-                        style: TextStyle(
-                            fontSize: 12.5, color: Dims.muted(context))),
+                    child: Text(
+                      'or',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: Dims.muted(context),
+                      ),
+                    ),
                   ),
                   Expanded(
                     child: Divider(color: Dims.border(context), height: 1),
@@ -305,15 +304,19 @@ class _UpgradeAccountSheetState extends ConsumerState<_UpgradeAccountSheet> {
                 child: OutlinedButton.icon(
                   onPressed: _busy ? null : _apple,
                   icon: const Icon(Icons.apple, size: 22),
-                  label: const Text('Continue with Apple',
-                      style:
-                          TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                  label: const Text(
+                    'Continue with Apple',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                  ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Theme.of(context).colorScheme.onSurface,
                     side: BorderSide(
-                        color: Dims.border(context), width: Dims.hairline),
+                      color: Dims.border(context),
+                      width: Dims.hairline,
+                    ),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(Dims.rSm)),
+                      borderRadius: BorderRadius.circular(Dims.rSm),
+                    ),
                   ),
                 ),
               ),
@@ -321,7 +324,9 @@ class _UpgradeAccountSheetState extends ConsumerState<_UpgradeAccountSheet> {
             const SizedBox(height: Dims.s),
             Center(
               child: TextButton(
-                onPressed: _busy ? null : () => Navigator.of(context).pop(false),
+                onPressed: _busy
+                    ? null
+                    : () => Navigator.of(context).pop(false),
                 child: Text(
                   'Not now',
                   style: TextStyle(color: Dims.muted(context)),
@@ -357,11 +362,17 @@ class _UpgradeAccountSheetState extends ConsumerState<_UpgradeAccountSheet> {
         contentPadding: const EdgeInsets.symmetric(vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(Dims.rSm),
-          borderSide: BorderSide(color: Dims.border(context), width: Dims.hairline),
+          borderSide: BorderSide(
+            color: Dims.border(context),
+            width: Dims.hairline,
+          ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(Dims.rSm),
-          borderSide: BorderSide(color: Dims.border(context), width: Dims.hairline),
+          borderSide: BorderSide(
+            color: Dims.border(context),
+            width: Dims.hairline,
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(Dims.rSm),

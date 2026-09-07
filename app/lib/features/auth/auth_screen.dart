@@ -227,7 +227,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 ),
                 const SizedBox(height: Dims.l),
                 const Text(
-                  'The Evangelist',
+                  'Go and Tell',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 26,
@@ -393,7 +393,9 @@ class _SegToggle extends StatelessWidget {
           curve: Curves.easeOut,
           padding: const EdgeInsets.symmetric(vertical: 9),
           decoration: BoxDecoration(
-            color: active ? Theme.of(c).colorScheme.surface : Colors.transparent,
+            color: active
+                ? Theme.of(c).colorScheme.surface
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(Dims.s),
             border: active
                 ? Border.all(color: Dims.border(c), width: Dims.hairline)
@@ -405,9 +407,7 @@ class _SegToggle extends StatelessWidget {
             style: TextStyle(
               fontSize: 13.5,
               fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-              color: active
-                  ? Theme.of(c).colorScheme.onSurface
-                  : Dims.muted(c),
+              color: active ? Theme.of(c).colorScheme.onSurface : Dims.muted(c),
             ),
           ),
         ),
@@ -451,11 +451,17 @@ class _Field extends StatelessWidget {
         contentPadding: const EdgeInsets.symmetric(vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(Dims.rSm),
-          borderSide: BorderSide(color: Dims.border(context), width: Dims.hairline),
+          borderSide: BorderSide(
+            color: Dims.border(context),
+            width: Dims.hairline,
+          ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(Dims.rSm),
-          borderSide: BorderSide(color: Dims.border(context), width: Dims.hairline),
+          borderSide: BorderSide(
+            color: Dims.border(context),
+            width: Dims.hairline,
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(Dims.rSm),
@@ -517,7 +523,10 @@ class _ErrorBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: danger.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(Dims.rSm),
-        border: Border.all(color: danger.withValues(alpha: 0.30), width: Dims.hairline),
+        border: Border.all(
+          color: danger.withValues(alpha: 0.30),
+          width: Dims.hairline,
+        ),
       ),
       child: Row(
         children: [

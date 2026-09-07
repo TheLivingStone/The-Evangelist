@@ -19,6 +19,7 @@ class DashboardScreen extends ConsumerWidget {
     final profile = ref.watch(myProfileProvider);
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: RefreshIndicator(
         color: AppColors.accent,
         onRefresh: () async {
@@ -29,19 +30,22 @@ class DashboardScreen extends ConsumerWidget {
           ref.invalidate(recentActivityProvider);
         },
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            Dims.l,
-            Dims.s,
-            Dims.l,
-            96, // clear the bottom nav + FAB
+          // No AppBar on this tab, and an explicit padding replaces the
+          // ListView's automatic safe-area inset — so add the status-bar
+          // height ourselves or the greeting renders under the clock.
+          padding: EdgeInsets.fromLTRB(
+            Dims.gutter(context),
+            MediaQuery.paddingOf(context).top + Dims.s,
+            Dims.gutter(context),
+            MediaQuery.paddingOf(context).bottom +
+                Dims.l, // under the glass bar
           ),
           children: [
             _Greeting(profile: profile),
             const SizedBox(height: Dims.l),
             profile.when(
-              data: (p) => p == null
-                  ? const SizedBox.shrink()
-                  : _StreakHero(profile: p),
+              data: (p) =>
+                  p == null ? const SizedBox.shrink() : _StreakHero(profile: p),
               loading: () => const _StreakHeroSkeleton(),
               error: (e, _) => _ErrorCard(message: '$e'),
             ),
@@ -75,7 +79,10 @@ class _Greeting extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final date = DateFormat('EEEE · MMM d').format(DateTime.now());
-    final firstName = profile.value?.fullName.trim().split(' ').first ?? '';
+    // 'Evangelist' / 'Guest' are server/client placeholders, not real names —
+    // greet without a name until the user has told us theirs.
+    final raw = profile.value?.fullName.trim() ?? '';
+    final firstName = isPlaceholderName(raw) ? '' : raw.split(' ').first;
     final greeting = firstName.isEmpty
         ? _timeGreeting
         : '$_timeGreeting, $firstName';
@@ -104,7 +111,10 @@ class _Greeting extends StatelessWidget {
           height: 38,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: Dims.border(context), width: Dims.hairline),
+            border: Border.all(
+              color: Dims.border(context),
+              width: Dims.hairline,
+            ),
           ),
           child: Icon(
             Icons.notifications_none_rounded,
@@ -439,7 +449,9 @@ class _ActionRow extends StatelessWidget {
           Icon(
             Icons.chevron_right_rounded,
             size: 18,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.3),
           ),
         ],
       ),
@@ -468,7 +480,10 @@ class _RecentActivity extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(vertical: Dims.s),
                     child: Text(
                       'Nothing yet — tap ＋ to log your first outreach.',
-                      style: TextStyle(fontSize: 13, color: Dims.muted(context)),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Dims.muted(context),
+                      ),
                     ),
                   )
                 : Column(

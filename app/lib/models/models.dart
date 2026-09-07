@@ -2,6 +2,18 @@
 
 DateTime? _date(dynamic v) => v == null ? null : DateTime.parse(v.toString());
 
+/// 'Evangelist' is the DB fallback, 'Guest' the anonymous seed — neither is a
+/// name the user typed.
+bool isPlaceholderName(String name) {
+  const placeholders = {'', 'evangelist', 'guest'};
+  return placeholders.contains(name.trim().toLowerCase());
+}
+
+extension ProfileName on Profile {
+  /// False while full_name is still a placeholder (see [isPlaceholderName]).
+  bool get hasRealName => !isPlaceholderName(fullName);
+}
+
 class Profile {
   final String id;
   final String fullName;
@@ -372,7 +384,8 @@ class Church {
   final String? serviceTimes;
   final String? website;
   final bool isVerified;
-  final String? claimStatus; // 'unclaimed' | 'pending' | 'approved' | 'rejected'
+  final String?
+  claimStatus; // 'unclaimed' | 'pending' | 'approved' | 'rejected'
   final double? latitude;
   final double? longitude;
   final double? distanceM;

@@ -1,6 +1,6 @@
 # Branding — App Icon
 
-The Evangelist's app icon, ready to become the real home-screen icon on **iOS and Android** from one Flutter command.
+Go and Tell's app icon, ready to become the real home-screen icon on **iOS and Android** from one Flutter command.
 
 ## Files in this folder
 

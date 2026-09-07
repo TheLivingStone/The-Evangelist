@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/glass.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../core/providers.dart';
@@ -111,7 +112,7 @@ class _AddPersonScreenState extends ConsumerState<AddPersonScreen> {
     final shareWithChurch =
         _shareOverride ?? profile?.shareContactsWithChurch ?? false;
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Person')),
+      appBar: GlassAppBar(title: const Text('Add Person')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

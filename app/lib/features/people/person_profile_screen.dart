@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/glass.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -20,30 +21,35 @@ class _PersonProfileScreenState extends ConsumerState<PersonProfileScreen> {
 
   Future<void> _changeStatus(String s) async {
     await ref.read(contactsRepoProvider).update(c.id, {'status': s});
-    setState(() => c = Contact.fromMap({
-          'id': c.id,
-          'owner_id': c.ownerId,
-          'first_name': c.firstName,
-          'last_name': c.lastName,
-          'phone': c.phone,
-          'email': c.email,
-          'city': c.city,
-          'met_location': c.metLocation,
-          'date_met': c.dateMet.toIso8601String(),
-          'status': s,
-          'notes': c.notes,
-          'next_followup_at':
-              c.nextFollowupAt?.toIso8601String().substring(0, 10),
-          'tags': c.tags,
-          'visible_to_church': c.visibleToChurch,
-          'met_lat': c.metLat,
-          'met_lng': c.metLng,
-          'created_at': c.createdAt.toIso8601String(),
-        }));
+    setState(
+      () => c = Contact.fromMap({
+        'id': c.id,
+        'owner_id': c.ownerId,
+        'first_name': c.firstName,
+        'last_name': c.lastName,
+        'phone': c.phone,
+        'email': c.email,
+        'city': c.city,
+        'met_location': c.metLocation,
+        'date_met': c.dateMet.toIso8601String(),
+        'status': s,
+        'notes': c.notes,
+        'next_followup_at': c.nextFollowupAt?.toIso8601String().substring(
+          0,
+          10,
+        ),
+        'tags': c.tags,
+        'visible_to_church': c.visibleToChurch,
+        'met_lat': c.metLat,
+        'met_lng': c.metLng,
+        'created_at': c.createdAt.toIso8601String(),
+      }),
+    );
     // connecting to church is itself an outreach activity
     if (s == 'connected_to_church') {
-      await ref.read(activityRepoProvider).log('church_connection',
-          contactId: c.id);
+      await ref
+          .read(activityRepoProvider)
+          .log('church_connection', contactId: c.id);
       ref.invalidate(myProfileProvider);
     }
   }
@@ -53,8 +59,9 @@ class _PersonProfileScreenState extends ConsumerState<PersonProfileScreen> {
     ref.invalidate(myProfileProvider);
     ref.invalidate(monthCountsProvider);
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('💬 Conversation logged')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('💬 Conversation logged')));
     }
   }
 
@@ -62,15 +69,16 @@ class _PersonProfileScreenState extends ConsumerState<PersonProfileScreen> {
     await ref.read(activityRepoProvider).log('followup', contactId: c.id);
     ref.invalidate(myProfileProvider);
     if (mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('📩 Follow-up logged')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('📩 Follow-up logged')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(c.displayName)),
+      appBar: GlassAppBar(title: Text(c.displayName)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -78,15 +86,19 @@ class _PersonProfileScreenState extends ConsumerState<PersonProfileScreen> {
             child: CircleAvatar(
               radius: 40,
               backgroundColor: AppColors.accent.withValues(alpha: 0.2),
-              child: Text(c.firstName.characters.first,
-                  style: const TextStyle(fontSize: 32)),
+              child: Text(
+                c.firstName.characters.first,
+                style: const TextStyle(fontSize: 32),
+              ),
             ),
           ),
           const SizedBox(height: 12),
           Center(
-              child: Text(c.displayName,
-                  style: const TextStyle(
-                      fontSize: 22, fontWeight: FontWeight.w800))),
+            child: Text(
+              c.displayName,
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+            ),
+          ),
           Center(child: Text(prettyStatus(c.status))),
           const SizedBox(height: 20),
           Row(
@@ -103,8 +115,10 @@ class _PersonProfileScreenState extends ConsumerState<PersonProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Details',
-                      style: TextStyle(fontWeight: FontWeight.w800)),
+                  const Text(
+                    'Details',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
                   const SizedBox(height: 8),
                   if (c.phone != null) _row(Icons.phone, c.phone!),
                   if (c.email != null) _row(Icons.email, c.email!),
@@ -130,19 +144,24 @@ class _PersonProfileScreenState extends ConsumerState<PersonProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Spiritual journey',
-                      style: TextStyle(fontWeight: FontWeight.w800)),
+                  const Text(
+                    'Spiritual journey',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
                     children: spiritualStatuses
-                        .map((s) => ChoiceChip(
-                              label: Text(prettyStatus(s)),
-                              selected: c.status == s,
-                              selectedColor:
-                                  AppColors.green.withValues(alpha: 0.25),
-                              onSelected: (_) => _changeStatus(s),
-                            ))
+                        .map(
+                          (s) => ChoiceChip(
+                            label: Text(prettyStatus(s)),
+                            selected: c.status == s,
+                            selectedColor: AppColors.green.withValues(
+                              alpha: 0.25,
+                            ),
+                            onSelected: (_) => _changeStatus(s),
+                          ),
+                        )
                         .toList(),
                   ),
                 ],
@@ -155,26 +174,29 @@ class _PersonProfileScreenState extends ConsumerState<PersonProfileScreen> {
   }
 
   Widget _quick(IconData icon, String label, VoidCallback onTap) => Column(
-        children: [
-          IconButton.filled(
-            onPressed: onTap,
-            icon: Icon(icon),
-            style: IconButton.styleFrom(
-                backgroundColor: AppColors.accent.withValues(alpha: 0.15),
-                foregroundColor: AppColors.accent),
-          ),
-          Text(label, style: const TextStyle(fontSize: 12)),
-        ],
-      );
+    children: [
+      IconButton.filled(
+        onPressed: onTap,
+        icon: Icon(icon),
+        style: IconButton.styleFrom(
+          backgroundColor: AppColors.accent.withValues(alpha: 0.15),
+          foregroundColor: AppColors.accent,
+        ),
+      ),
+      Text(label, style: const TextStyle(fontSize: 12)),
+    ],
+  );
 
   Widget _row(IconData icon, String text) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(children: [
-          Icon(icon, size: 18, color: Colors.grey),
-          const SizedBox(width: 10),
-          Expanded(child: Text(text)),
-        ]),
-      );
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      children: [
+        Icon(icon, size: 18, color: Colors.grey),
+        const SizedBox(width: 10),
+        Expanded(child: Text(text)),
+      ],
+    ),
+  );
 }
 
 /// A small, mostly-static map pinning where a contact was met — a quiet
@@ -200,7 +222,8 @@ class _MetLocationMap extends StatelessWidget {
               children: [
                 TileLayer(
                   urlTemplate:
-                      'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+                      'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+                  maxNativeZoom: 16,
                   userAgentPackageName: 'com.theevangelist.the_evangelist',
                 ),
                 MarkerLayer(

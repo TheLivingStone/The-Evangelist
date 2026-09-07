@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/glass.dart';
 import '../community/composer_screen.dart';
 
 class SessionSummaryScreen extends StatelessWidget {
@@ -22,7 +23,7 @@ class SessionSummaryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      appBar: GlassAppBar(
         automaticallyImplyLeading: false,
         title: const Text('Session Complete 🎉'),
       ),
@@ -31,8 +32,10 @@ class SessionSummaryScreen extends StatelessWidget {
         child: Column(
           children: [
             const SizedBox(height: 20),
-            const Text('Well done, faithful evangelist!',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+            const Text(
+              'Well done, faithful evangelist!',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+            ),
             const SizedBox(height: 24),
             Card(
               child: Padding(
@@ -82,20 +85,23 @@ class SessionSummaryScreen extends StatelessWidget {
   }
 
   Widget _row(BuildContext context, String k, String v) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(k,
-                style: TextStyle(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6))),
-            Text(v,
-                style: const TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.w800)),
-          ],
+    padding: const EdgeInsets.symmetric(vertical: 8),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          k,
+          style: TextStyle(
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
         ),
-      );
+        Text(
+          v,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+        ),
+      ],
+    ),
+  );
 }

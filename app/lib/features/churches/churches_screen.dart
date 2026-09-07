@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/glass.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../core/providers.dart';
@@ -68,7 +69,7 @@ class _ChurchesScreenState extends ConsumerState<ChurchesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Churches')),
+      appBar: GlassAppBar(title: const Text('Churches')),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.accent,
         onPressed: _openRegister,
@@ -87,7 +88,9 @@ class _ChurchesScreenState extends ConsumerState<ChurchesScreen> {
             );
           }
           if (snap.hasError) {
-            return Center(child: Text('Could not load churches: ${snap.error}'));
+            return Center(
+              child: Text('Could not load churches: ${snap.error}'),
+            );
           }
           final churches = snap.data ?? [];
           return RefreshIndicator(
@@ -231,9 +234,9 @@ class _CardActions extends ConsumerWidget {
         }
       } catch (error) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Could not join: $error')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Could not join: $error')));
         }
       }
     }
@@ -251,10 +254,7 @@ class _CardActions extends ConsumerWidget {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         if (attendsThis)
-          _AttendChip(
-            confirmed: membership.isConfirmed,
-            onLeave: leave,
-          )
+          _AttendChip(confirmed: membership.isConfirmed, onLeave: leave)
         else
           TextButton.icon(
             style: TextButton.styleFrom(padding: EdgeInsets.zero),

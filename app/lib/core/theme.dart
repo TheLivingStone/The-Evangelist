@@ -14,9 +14,10 @@ class Dims {
   static const double xxl = 28;
 
   // Corner radii. Cards are soft but not pill-round.
-  static const double rSm = 12;
-  static const double rMd = 16;
-  static const double rLg = 18;
+  // Concentric with the glass layer: sheet 32 − inset 12 = card 20.
+  static const double rSm = 14;
+  static const double rMd = 20;
+  static const double rLg = 24;
   static const double rPill = 999;
 
   // Hairline border — the signature of the refined half of the system. Kept at
@@ -28,6 +29,17 @@ class Dims {
       Theme.of(context).brightness == Brightness.dark
       ? Colors.white.withValues(alpha: 0.08)
       : const Color(0xFFE6E6DF);
+
+  /// Max readable width for a column of content. On iPad the app would
+  /// otherwise stretch cards and paragraphs across 1024pt.
+  static const double maxContent = 640;
+
+  /// Horizontal padding that keeps content within [maxContent] and centred,
+  /// never less than [base].
+  static double gutter(BuildContext context, [double base = l]) {
+    final w = MediaQuery.sizeOf(context).width;
+    return w > maxContent + base * 2 ? (w - maxContent) / 2 : base;
+  }
 
   /// A muted on-surface colour for secondary text, theme-aware.
   static Color muted(BuildContext context) =>
@@ -165,26 +177,103 @@ class AppTheme {
           ),
         ),
       ),
+      // Controls are capsules (Liquid Glass); the primary action keeps the
+      // accent — the one bold moment — everything secondary is glass-like.
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.accent,
           foregroundColor: Colors.white,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 22),
+          shape: const StadiumBorder(),
           textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.accent,
+          foregroundColor: Colors.white,
+          shape: const StadiumBorder(),
+          textStyle: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: text,
+          backgroundColor: dark
+              ? Colors.white.withValues(alpha: 0.07)
+              : Colors.black.withValues(alpha: 0.04),
+          side: BorderSide(
+            color: dark
+                ? Colors.white.withValues(alpha: 0.14)
+                : Colors.black.withValues(alpha: 0.08),
+            width: 0.8,
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 22),
+          shape: const StadiumBorder(),
+          textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.accent,
+          shape: const StadiumBorder(),
+          textStyle: const TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: dark ? AppColors.dSurface2 : AppColors.lSurface2,
+        fillColor: dark
+            ? Colors.white.withValues(alpha: 0.06)
+            : Colors.black.withValues(alpha: 0.04),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(Dims.rSm),
           borderSide: BorderSide.none,
         ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Dims.rSm),
+          borderSide: BorderSide(
+            color: dark
+                ? Colors.white.withValues(alpha: 0.10)
+                : Colors.black.withValues(alpha: 0.06),
+            width: 0.8,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Dims.rSm),
+          borderSide: const BorderSide(color: AppColors.accent, width: 1.2),
+        ),
         hintStyle: TextStyle(color: muted),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: dark ? AppColors.dSurface2 : AppColors.lSurface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Dims.rLg + 4),
+          side: BorderSide(
+            color: dark
+                ? Colors.white.withValues(alpha: 0.12)
+                : Colors.black.withValues(alpha: 0.06),
+            width: 0.8,
+          ),
+        ),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        // Sheets stay a phone-sized pane on iPad instead of a full-width slab.
+        constraints: BoxConstraints(maxWidth: 600),
+      ),
+      tabBarTheme: const TabBarThemeData(
+        dividerColor: Colors.transparent,
+        indicatorSize: TabBarIndicatorSize.label,
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Dims.rSm),
+        ),
       ),
       textTheme: Typography.material2021().white
           .apply(bodyColor: text, displayColor: text)

@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/auth_account.dart';
+import '../../core/glass.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../people/people_screen.dart';
 import '../people/add_person_screen.dart';
 import '../sessions/session_live_screen.dart';
 import '../community/composer_screen.dart';
+import '../../core/coach_marks.dart';
 
 /// The ➕ Start "What happened today?" movement sheet — the core action.
 class StartSheet extends ConsumerWidget {
@@ -14,28 +16,22 @@ class StartSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final surface = Theme.of(context).colorScheme.surface;
-    return Container(
-      decoration: BoxDecoration(
-        color: surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!context.mounted) return;
+      CoachMarks.show(
+        context,
+        id: 'log',
+        target: CoachTargets.logConversation,
+        text:
+            'One tap logs a Gospel conversation to your record and streak. '
+            'Prayers and new people work the same way.',
+      );
+    });
+    return GlassSheet(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
           const Text(
             'What happened today?',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
@@ -52,14 +48,20 @@ class StartSheet extends ConsumerWidget {
               if (!context.mounted) return;
               final navigator = Navigator.of(context);
               final messenger = ScaffoldMessenger.of(context);
+              // This sheet is unmounted the moment we navigate away, and
+              // Riverpod 3 throws if `ref` is touched after that. Grab the
+              // container now and use it for everything that follows.
+              final container = ProviderScope.containerOf(context);
               navigator.pushReplacement(
                 MaterialPageRoute(
                   builder: (_) => const _StartingSessionScreen(),
                 ),
               );
               try {
-                final session = await ref.read(sessionsRepoProvider).start();
-                ref.invalidate(liveSessionProvider);
+                final session = await container
+                    .read(sessionsRepoProvider)
+                    .start();
+                container.invalidate(liveSessionProvider);
                 navigator.pushReplacement(
                   MaterialPageRoute(
                     builder: (_) => SessionLiveScreen(session: session),
@@ -89,20 +91,23 @@ class StartSheet extends ConsumerWidget {
               );
             },
           ),
-          _action(
-            context,
-            Icons.chat_bubble,
-            AppColors.green,
-            'Log Conversation',
-            'Quick log a Gospel conversation',
-            () async {
-              await _quickLog(
-                context,
-                ref,
-                'conversation',
-                'Conversation logged',
-              );
-            },
+          KeyedSubtree(
+            key: CoachTargets.logConversation,
+            child: _action(
+              context,
+              Icons.chat_bubble,
+              AppColors.green,
+              'Log Conversation',
+              'Quick log a Gospel conversation',
+              () async {
+                await _quickLog(
+                  context,
+                  ref,
+                  'conversation',
+                  'Conversation logged',
+                );
+              },
+            ),
           ),
           _action(
             context,
@@ -159,6 +164,9 @@ class StartSheet extends ConsumerWidget {
     if (!context.mounted) return;
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
+    // Popping the sheet unmounts this widget; Riverpod 3 throws on any `ref`
+    // use after that, so hold the container instead (see Start Session above).
+    final container = ProviderScope.containerOf(context);
     navigator.pop();
     messenger.showSnackBar(
       const SnackBar(
@@ -167,12 +175,12 @@ class StartSheet extends ConsumerWidget {
       ),
     );
     try {
-      final live = await ref.read(sessionsRepoProvider).live();
-      await ref.read(activityRepoProvider).log(type, sessionId: live?.id);
-      ref.invalidate(myProfileProvider);
-      ref.invalidate(monthCountsProvider);
-      ref.invalidate(recentActivityProvider);
-      ref.invalidate(weekDaysActiveProvider);
+      final live = await container.read(sessionsRepoProvider).live();
+      await container.read(activityRepoProvider).log(type, sessionId: live?.id);
+      container.invalidate(myProfileProvider);
+      container.invalidate(monthCountsProvider);
+      container.invalidate(recentActivityProvider);
+      container.invalidate(weekDaysActiveProvider);
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(SnackBar(content: Text('$msg - keep going!')));
     } catch (error) {
@@ -194,7 +202,7 @@ class StartSheet extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Material(
-        color: Theme.of(context).colorScheme.surface,
+        color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(14),

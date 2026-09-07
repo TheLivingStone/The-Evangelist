@@ -1,8 +1,8 @@
-# The Evangelist — Technical Documentation
+# Go and Tell — Technical Documentation
 
 > A mobile app that helps Christians share the Gospel, track their outreach, follow up with new believers, and connect them to local churches. "A movement you can track."
 
-This folder is the engineering source of truth for building **The Evangelist** on **Flutter (iOS + Android)** with a **Supabase (Postgres)** backend.
+This folder is the engineering source of truth for building **Go and Tell** on **Flutter (iOS + Android)** with a **Supabase (Postgres)** backend.
 
 ## Document index
 

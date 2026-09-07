@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/env.dart';
+import '../onboarding/how_it_works_screen.dart';
+import '../../core/coach_marks.dart';
+import '../../core/glass.dart';
 import '../../core/providers.dart';
 import '../../core/supabase.dart';
 import '../../core/theme.dart';
 import '../../models/models.dart';
+import 'blocked_accounts_screen.dart';
+import 'edit_profile_dialog.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -15,7 +20,9 @@ class ProfileScreen extends ConsumerWidget {
     final achievements = ref.watch(achievementsProvider);
 
     return Scaffold(
-      appBar: AppBar(
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
+      appBar: GlassAppBar(
         title: const Text('Profile'),
         actions: Env.backendEnabled
             ? [
@@ -28,142 +35,168 @@ class ProfileScreen extends ConsumerWidget {
               ]
             : null,
       ),
-      body: profile.when(
-        data: (p) => p == null
-            ? const Center(child: Text('No profile'))
-            : ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  Center(
-                    child: CircleAvatar(
-                      radius: 44,
-                      backgroundColor: AppColors.accent.withValues(alpha: 0.2),
+      body: Builder(
+        builder: (context) => profile.when(
+          data: (p) => p == null
+              ? const Center(child: Text('No profile'))
+              : ListView(
+                  padding: EdgeInsets.fromLTRB(
+                    Dims.gutter(context),
+                    MediaQuery.paddingOf(context).top + 16,
+                    Dims.gutter(context),
+                    MediaQuery.paddingOf(context).bottom + 16,
+                  ),
+                  children: [
+                    Center(
+                      child: CircleAvatar(
+                        radius: 44,
+                        backgroundColor: AppColors.accent.withValues(
+                          alpha: 0.2,
+                        ),
+                        child: Text(
+                          p.fullName.characters.first,
+                          style: const TextStyle(fontSize: 34),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              p.hasRealName ? p.fullName : 'Add your name',
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                color: p.hasRealName
+                                    ? null
+                                    : Theme.of(context).colorScheme.onSurface
+                                          .withValues(alpha: 0.5),
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: 'Edit name and city',
+                            icon: const Icon(Icons.edit_outlined, size: 20),
+                            onPressed: () => showEditProfileDialog(context, p),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Center(
                       child: Text(
-                        p.fullName.characters.first,
-                        style: const TextStyle(fontSize: 34),
+                        [
+                          p.church,
+                          p.city,
+                        ].where((e) => e != null && e.isNotEmpty).join(' · '),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Center(
-                    child: Text(
-                      p.fullName,
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  Center(
-                    child: Text(
-                      [
-                        p.church,
-                        p.city,
-                      ].where((e) => e != null && e.isNotEmpty).join(' · '),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Lifetime Impact',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 16,
+                    const SizedBox(height: 20),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Lifetime Impact',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 16,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          GridView.count(
-                            crossAxisCount: 2,
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            childAspectRatio: 2.4,
-                            mainAxisSpacing: 10,
-                            crossAxisSpacing: 10,
-                            children: [
-                              _stat(
-                                'Conversations',
-                                p.totalConversations,
-                                AppColors.green,
-                              ),
-                              _stat(
-                                'Salvations',
-                                p.totalSalvations,
-                                AppColors.accent,
-                              ),
-                              _stat(
-                                'Follow-Ups',
-                                p.totalFollowups,
-                                AppColors.blue,
-                              ),
-                              _stat(
-                                'Church Connections',
-                                p.totalChurchConnections,
-                                AppColors.purple,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _miniStat(
-                                  '🔥 Current streak',
-                                  '${p.currentStreak} days',
+                            const SizedBox(height: 12),
+                            GridView.count(
+                              crossAxisCount: 2,
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              childAspectRatio: 2.4,
+                              mainAxisSpacing: 10,
+                              crossAxisSpacing: 10,
+                              children: [
+                                _stat(
+                                  'Conversations',
+                                  p.totalConversations,
+                                  AppColors.green,
                                 ),
-                              ),
-                              Expanded(
-                                child: _miniStat(
-                                  '🏅 Longest streak',
-                                  '${p.longestStreak} days',
+                                _stat(
+                                  'Salvations',
+                                  p.totalSalvations,
+                                  AppColors.accent,
                                 ),
+                                _stat(
+                                  'Follow-Ups',
+                                  p.totalFollowups,
+                                  AppColors.blue,
+                                ),
+                                _stat(
+                                  'Church Connections',
+                                  p.totalChurchConnections,
+                                  AppColors.purple,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _miniStat(
+                                    '🔥 Current streak',
+                                    '${p.currentStreak} days',
+                                  ),
+                                ),
+                                Expanded(
+                                  child: _miniStat(
+                                    '🏅 Longest streak',
+                                    '${p.longestStreak} days',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Achievements',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 16,
                               ),
-                            ],
-                          ),
-                        ],
+                            ),
+                            const SizedBox(height: 12),
+                            achievements.when(
+                              data: (list) => Wrap(
+                                spacing: 12,
+                                runSpacing: 12,
+                                children: list.map((a) => _badge(a)).toList(),
+                              ),
+                              loading: () => const LinearProgressIndicator(),
+                              error: (e, _) => Text('Error: $e'),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Achievements',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          achievements.when(
-                            data: (list) => Wrap(
-                              spacing: 12,
-                              runSpacing: 12,
-                              children: list.map((a) => _badge(a)).toList(),
-                            ),
-                            loading: () => const LinearProgressIndicator(),
-                            error: (e, _) => Text('Error: $e'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _SettingsCard(profile: p),
-                ],
-              ),
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.accent),
+                    const SizedBox(height: 16),
+                    _SettingsCard(profile: p),
+                  ],
+                ),
+          loading: () => const Center(
+            child: CircularProgressIndicator(color: AppColors.accent),
+          ),
+          error: (e, _) => Center(child: Text('Error: $e')),
         ),
-        error: (e, _) => Center(child: Text('Error: $e')),
       ),
     );
   }
@@ -369,6 +402,35 @@ class _SettingsCardState extends ConsumerState<_SettingsCard> {
                         apply: (value) => _shareContacts = value,
                       ),
               ),
+            const Divider(height: 8),
+            ListTile(
+              leading: const Icon(Icons.help_outline),
+              title: const Text('How Go and Tell works'),
+              subtitle: const Text('A 7-step tour, and show the tips again'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                CoachMarks.reset();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const HowItWorksScreen()),
+                );
+              },
+            ),
+            // Blocking management (App Store Guideline 1.2): blocks must be
+            // reviewable and reversible, not one-way.
+            const Divider(height: 8),
+            ListTile(
+              leading: const Icon(Icons.block),
+              title: const Text('Blocked accounts'),
+              subtitle: const Text('Review or undo people you have blocked'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const BlockedAccountsScreen(),
+                ),
+              ),
+            ),
             // Account deletion is required by Apple (Guideline 5.1.1(v)) for any
             // app with accounts. Hidden in demo mode and for guests (a guest has
             // no real account — they can just sign out / reinstall).
@@ -384,7 +446,9 @@ class _SettingsCardState extends ConsumerState<_SettingsCard> {
                   'Delete account',
                   style: TextStyle(color: Color(0xFFE5484D)),
                 ),
-                subtitle: const Text('Permanently remove your account and data'),
+                subtitle: const Text(
+                  'Permanently remove your account and data',
+                ),
                 enabled: !_saving.contains('delete'),
                 onTap: _confirmDelete,
               ),
@@ -430,7 +494,9 @@ class _SettingsCardState extends ConsumerState<_SettingsCard> {
       // already-deleted user.
       try {
         await supabase.auth.signOut();
-      } catch (_) {/* session already invalid — fine */}
+      } catch (_) {
+        /* session already invalid — fine */
+      }
     } catch (error) {
       if (!mounted) return;
       setState(() => _saving.remove('delete'));

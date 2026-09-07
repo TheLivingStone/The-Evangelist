@@ -2,7 +2,7 @@
 
 ## What we are building
 
-The Evangelist is a cross-platform mobile app (iOS + Android) that makes personal evangelism **visible, consistent, and sustainable**. It blends four product instincts:
+Go and Tell is a cross-platform mobile app (iOS + Android) that makes personal evangelism **visible, consistent, and sustainable**. It blends four product instincts:
 
 - **Strava** — track real-world effort: sessions, streaks, impact stats, a live map of who is out evangelising right now.
 - **Duolingo** — habit and encouragement: daily goals, streaks, missions, celebratory moments.

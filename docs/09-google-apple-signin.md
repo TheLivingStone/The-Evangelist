@@ -21,7 +21,7 @@ Your values, pre-filled:
 ### A1. Google Cloud Console — create OAuth clients
 1. Go to <https://console.cloud.google.com> → create (or pick) a project.
 2. **APIs & Services → OAuth consent screen**: configure it (External, app name
-   "The Evangelist", your support email). Add yourself as a test user while in
+   "Go and Tell", your support email). Add yourself as a test user while in
    testing, or publish it.
 3. **APIs & Services → Credentials → Create credentials → OAuth client ID**,
    make **two** clients:

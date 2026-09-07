@@ -1,4 +1,4 @@
-# 10 · App Store Launch Checklist (The Evangelist)
+# 10 · App Store Launch Checklist (Go and Tell)
 
 The exact, ordered steps to get this app live on the iOS App Store. Items marked
 **[CODE ✅]** are already done in the repo (on the `launch-prep` branch). Items
@@ -49,7 +49,8 @@ tries a real-account action.
 3. **SQL Editor**: paste and run **`supabase/migrate_all.sql`** (one shot:
    reset → schema → policies). Then run, in any order:
    `migrate_church_members.sql`, `migrate_church_registration.sql`,
-   `migrate_feed_comments_photos.sql`, `migrate_admin_analytics.sql`.
+   `migrate_church_pastor.sql`, `migrate_feed_comments_photos.sql`,
+   `migrate_admin_analytics.sql`.
 4. **Authentication → Providers**:
    - Enable **Anonymous sign-ins** (the app's guest mode depends on this).
    - Enable **Apple**. Fill in the values from step D below.
@@ -86,7 +87,7 @@ the live backend.
 1. **Enroll** in the Apple Developer Program ($99/yr) at developer.apple.com →
    Account → Enroll. Individual is approved in ~1–3 days.
 2. **Register the bundle ID** (developer.apple.com → Identifiers). Use the
-   project's existing bundle id (the Xcode "The Evangelist" target). Enable the
+   project's existing bundle id (the Xcode "Go and Tell" target). Enable the
    **Sign in with Apple** capability on that App ID.
 3. **Sign in with Apple service config** (for Supabase): create the Service ID +
    key per docs/09-google-apple-signin.md, and paste the Service ID, Team ID,

@@ -57,6 +57,9 @@ dependencies:
   # sign_in_with_apple returns a raw Apple identity token; Supabase needs a
   # nonce pairing. crypto provides the sha256 used to hash the nonce.
   crypto: ^3.0.6
+  shared_preferences: ^2.5.5
+  http: ^1.6.0
+  geocoding: ^5.0.0
 
 dev_dependencies:
   flutter_test:
@@ -94,6 +97,7 @@ flutter:
   # tree at build time. Only public keys live here — never secrets.
   assets:
     - .env
+    - assets/hero.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

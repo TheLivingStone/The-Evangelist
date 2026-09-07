@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/glass.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
@@ -16,7 +17,7 @@ class ManageMembersScreen extends ConsumerWidget {
     final async = ref.watch(churchMembersProvider(church.id));
     final sharedAsync = ref.watch(churchSharedContactsProvider(church.id));
     return Scaffold(
-      appBar: AppBar(title: Text('${church.name} · Members')),
+      appBar: GlassAppBar(title: Text('${church.name} · Members')),
       body: async.when(
         loading: () => const Center(
           child: CircularProgressIndicator(color: AppColors.accent),
@@ -61,8 +62,9 @@ class ManageMembersScreen extends ConsumerWidget {
                     child: Text('No confirmed members yet.'),
                   )
                 else
-                  ...confirmed
-                      .map((m) => _MemberTile(church: church, member: m)),
+                  ...confirmed.map(
+                    (m) => _MemberTile(church: church, member: m),
+                  ),
                 const SizedBox(height: 20),
                 sharedAsync.when(
                   loading: () => const Column(
@@ -117,17 +119,17 @@ class _SectionLabel extends StatelessWidget {
   const _SectionLabel(this.text);
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
-        child: Text(
-          text.toUpperCase(),
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.4,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-          ),
-        ),
-      );
+    padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
+    child: Text(
+      text.toUpperCase(),
+      style: TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w800,
+        letterSpacing: 0.4,
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+      ),
+    ),
+  );
 }
 
 class _MemberTile extends ConsumerStatefulWidget {
@@ -148,9 +150,9 @@ class _MemberTileState extends ConsumerState<_MemberTile> {
       ref.invalidate(churchMembersProvider(widget.church.id));
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$failMsg: $error')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$failMsg: $error')));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -169,8 +171,9 @@ class _MemberTileState extends ConsumerState<_MemberTile> {
             CircleAvatar(
               radius: 20,
               backgroundColor: AppColors.accent.withValues(alpha: 0.15),
-              backgroundImage:
-                  m.avatarUrl != null ? NetworkImage(m.avatarUrl!) : null,
+              backgroundImage: m.avatarUrl != null
+                  ? NetworkImage(m.avatarUrl!)
+                  : null,
               child: m.avatarUrl == null
                   ? Text(
                       (m.fullName ?? '?').characters.first.toUpperCase(),
@@ -195,10 +198,9 @@ class _MemberTileState extends ConsumerState<_MemberTile> {
                     '${m.totalConversations} talks',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -220,7 +222,10 @@ class _MemberTileState extends ConsumerState<_MemberTile> {
                   if (m.isPending)
                     IconButton(
                       tooltip: 'Confirm',
-                      icon: const Icon(Icons.check_circle, color: AppColors.green),
+                      icon: const Icon(
+                        Icons.check_circle,
+                        color: AppColors.green,
+                      ),
                       onPressed: () => _run(
                         () => repo.confirmMember(m.membershipId),
                         'Could not confirm',
@@ -228,8 +233,10 @@ class _MemberTileState extends ConsumerState<_MemberTile> {
                     ),
                   IconButton(
                     tooltip: 'Remove',
-                    icon: const Icon(Icons.cancel_outlined,
-                        color: AppColors.pink),
+                    icon: const Icon(
+                      Icons.cancel_outlined,
+                      color: AppColors.pink,
+                    ),
                     onPressed: () => _run(
                       () => repo.removeMember(m.membershipId),
                       'Could not remove',
@@ -250,8 +257,9 @@ class _SharedContactTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final muted =
-        Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6);
+    final muted = Theme.of(
+      context,
+    ).colorScheme.onSurface.withValues(alpha: 0.6);
     final details = [
       contact.phone,
       contact.email,

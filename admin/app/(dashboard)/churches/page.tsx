@@ -57,7 +57,7 @@ export default async function ChurchesPage() {
           <h1>Churches</h1>
           <p className="subtitle">
             {churches.length} registered · <strong>{pending} awaiting review</strong>.
-            Confirm the claimant truly leads the church, then Verify.
+            Call or email the lead pastor, book a visit, confirm the church is taking part, then Verify.
           </p>
         </div>
       </div>
@@ -137,7 +137,8 @@ export default async function ChurchesPage() {
             <thead>
               <tr>
                 <th>Church</th>
-                <th>Claimant (for vetting)</th>
+                <th>Lead pastor (to verify)</th>
+                <th>Submitted by</th>
                 <th>Members</th>
                 <th>Status</th>
                 <th>Added</th>
@@ -160,6 +161,34 @@ export default async function ChurchesPage() {
                         {c.website}
                       </a>
                     ) : null}
+                  </td>
+                  <td>
+                    {c.pastor_name || c.pastor_phone || c.pastor_email ? (
+                      <>
+                        <div style={{ fontWeight: 600 }}>{c.pastor_name || "—"}</div>
+                        {c.pastor_phone ? (
+                          <div className="muted" style={{ fontSize: 12 }}>
+                            📞 <a href={`tel:${c.pastor_phone}`} style={{ color: "inherit" }}>{c.pastor_phone}</a>
+                          </div>
+                        ) : null}
+                        {c.pastor_email ? (
+                          <div className="muted" style={{ fontSize: 12 }}>
+                            ✉️{" "}
+                            <a
+                              href={`mailto:${c.pastor_email}?subject=${encodeURIComponent(`Go and Tell — verifying ${c.name}`)}`}
+                              style={{ color: "var(--accent2)" }}
+                            >
+                              {c.pastor_email}
+                            </a>
+                          </div>
+                        ) : null}
+                        {c.best_time_to_meet ? (
+                          <div className="muted" style={{ fontSize: 12 }}>🕒 {c.best_time_to_meet}</div>
+                        ) : null}
+                      </>
+                    ) : (
+                      <span className="muted">Not provided</span>
+                    )}
                   </td>
                   <td>
                     {c.claimant_name ? (

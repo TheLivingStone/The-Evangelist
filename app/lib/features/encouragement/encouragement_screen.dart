@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/glass.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
@@ -44,20 +45,23 @@ class _EncouragementScreenState extends ConsumerState<EncouragementScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Daily Encouragement')),
+      appBar: GlassAppBar(title: const Text('Daily Encouragement')),
       body: _loading
           ? const Center(
-              child: CircularProgressIndicator(color: AppColors.accent))
+              child: CircularProgressIndicator(color: AppColors.accent),
+            )
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
                 Card(
                   child: Container(
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: [
-                        AppColors.accent.withValues(alpha: 0.18),
-                        AppColors.purple.withValues(alpha: 0.08),
-                      ]),
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColors.accent.withValues(alpha: 0.18),
+                          AppColors.purple.withValues(alpha: 0.08),
+                        ],
+                      ),
                       borderRadius: BorderRadius.circular(18),
                     ),
                     padding: const EdgeInsets.all(22),
@@ -65,18 +69,23 @@ class _EncouragementScreenState extends ConsumerState<EncouragementScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                            _verse == null
-                                ? 'Go into all the world and proclaim the gospel to the whole creation.'
-                                : '"${_verse!.text}"',
-                            style: const TextStyle(
-                                fontSize: 18,
-                                fontStyle: FontStyle.italic,
-                                fontWeight: FontWeight.w600)),
+                          _verse == null
+                              ? 'Go into all the world and proclaim the gospel to the whole creation.'
+                              : '"${_verse!.text}"',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontStyle: FontStyle.italic,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         const SizedBox(height: 12),
-                        Text('— ${_verse?.reference ?? 'Mark 16:15'}',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.accent)),
+                        Text(
+                          '— ${_verse?.reference ?? 'Mark 16:15'}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.accent,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -91,17 +100,21 @@ class _EncouragementScreenState extends ConsumerState<EncouragementScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text("Today's mission",
-                    style:
-                        TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                const Text(
+                  "Today's mission",
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                ),
                 const SizedBox(height: 8),
-                ..._tasks.asMap().entries.map((e) => CheckboxListTile(
-                      title: Text(e.value.key),
-                      value: e.value.value,
-                      activeColor: AppColors.green,
-                      onChanged: (v) => setState(() =>
-                          _tasks[e.key] = MapEntry(e.value.key, v ?? false)),
-                    )),
+                ..._tasks.asMap().entries.map(
+                  (e) => CheckboxListTile(
+                    title: Text(e.value.key),
+                    value: e.value.value,
+                    activeColor: AppColors.green,
+                    onChanged: (v) => setState(
+                      () => _tasks[e.key] = MapEntry(e.value.key, v ?? false),
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: () => Navigator.pop(context),

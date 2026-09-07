@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/auth_account.dart';
+import '../../core/glass.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../../models/models.dart';
 import 'composer_screen.dart';
+import 'moderation.dart';
 import 'post_detail_screen.dart';
 import 'post_photo.dart';
 import '../map/map_screen.dart';
+import '../../core/coach_marks.dart';
 
 class CommunityScreen extends ConsumerStatefulWidget {
   const CommunityScreen({super.key});
@@ -26,6 +29,19 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen>
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      CoachMarks.show(
+        context,
+        id: 'post',
+        target: CoachTargets.composePost,
+        title: 'Share what God did',
+        text:
+            'Post a testimony or a prayer request here. Others can encourage '
+            'you and pray with you.',
+        delay: const Duration(milliseconds: 800),
+      );
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       ref.read(allFeedProvider.future).ignore();
     });
   }
@@ -39,8 +55,23 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
+      appBar: GlassAppBar(
         title: const Text('Community'),
+        actions: [
+          // Compose lives in the bar now — the floating slot belongs to the
+          // shell's action button (Liquid Glass: one floating action).
+          IconButton(
+            key: CoachTargets.composePost,
+            tooltip: 'New post',
+            icon: const Icon(Icons.edit_outlined),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ComposerScreen()),
+            ),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabs,
           isScrollable: true,
@@ -55,15 +86,6 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen>
             Tab(text: 'Nearby'),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton.small(
-        heroTag: 'composeFab',
-        backgroundColor: AppColors.accent,
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const ComposerScreen()),
-        ),
-        child: const Icon(Icons.edit, color: Colors.white),
       ),
       body: TabBarView(
         controller: _tabs,
@@ -102,7 +124,13 @@ class _FeedList extends ConsumerWidget {
                 ],
               )
             : ListView.builder(
-                padding: const EdgeInsets.all(12),
+                // Content scrolls beneath the glass app bar and tab bar.
+                padding: EdgeInsets.fromLTRB(
+                  Dims.gutter(context, 12),
+                  MediaQuery.paddingOf(context).top + 12,
+                  Dims.gutter(context, 12),
+                  MediaQuery.paddingOf(context).bottom + 12,
+                ),
                 itemCount: posts.length,
                 itemBuilder: (_, i) => PostCard(
                   key: ValueKey(posts[i].id),
@@ -189,6 +217,18 @@ class _PostCardState extends ConsumerState<PostCard> {
                     ),
                   ),
                   TypeBadge(type: post.type),
+                  IconButton(
+                    icon: const Icon(Icons.more_horiz, size: 20),
+                    tooltip: 'Report or block',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => showModerationSheet(
+                      context,
+                      ref,
+                      postId: post.id,
+                      authorId: post.authorId,
+                      authorName: name,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),

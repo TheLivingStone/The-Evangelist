@@ -54,6 +54,12 @@ export type ChurchRow = {
   claimant_phone: string | null;
   claimant_email: string | null;
   claim_notes: string | null;
+  // Lead pastor contact (added by migrate_church_pastor.sql). The team calls
+  // or emails the pastor to book the verification visit.
+  pastor_name: string | null;
+  pastor_phone: string | null;
+  pastor_email: string | null;
+  best_time_to_meet: string | null;
 };
 
 export type Overview = {
@@ -216,17 +222,26 @@ export async function getRecentPulse(limit = 12): Promise<PulseItem[]> {
     .slice(0, limit);
 }
 
+const CHURCH_COLUMNS =
+  "id,name,city,address,service_times,website,is_verified,claimed_by,created_at," +
+  "claim_status,claimant_name,claimant_role,claimant_phone,claimant_email,claim_notes";
+const PASTOR_COLUMNS = ",pastor_name,pastor_phone,pastor_email,best_time_to_meet";
+
 export async function getChurches(limit = 200): Promise<ChurchRow[]> {
-  const { data, error } = await supabaseAdmin()
-    .from("churches")
-    .select(
-      "id,name,city,address,service_times,website,is_verified,claimed_by,created_at," +
-        "claim_status,claimant_name,claimant_role,claimant_phone,claimant_email,claim_notes",
-    )
-    // Pending claims first (so the vetting queue is at the top), then newest.
-    .order("is_verified", { ascending: true })
-    .order("created_at", { ascending: false })
-    .limit(limit);
+  const query = (columns: string) =>
+    supabaseAdmin()
+      .from("churches")
+      .select(columns)
+      // Pending claims first (so the vetting queue is at the top), then newest.
+      .order("is_verified", { ascending: true })
+      .order("created_at", { ascending: false })
+      .limit(limit);
+  let { data, error } = await query(CHURCH_COLUMNS + PASTOR_COLUMNS);
+  // Until migrate_church_pastor.sql has run, the pastor columns do not exist;
+  // fall back to the older shape rather than breaking the whole page.
+  if (error && /pastor|best_time_to_meet/.test(error.message)) {
+    ({ data, error } = await query(CHURCH_COLUMNS));
+  }
   if (error) throw new Error(`getChurches: ${error.message}`);
   return (data ?? []) as unknown as ChurchRow[];
 }

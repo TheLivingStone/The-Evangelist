@@ -1,6 +1,6 @@
 # 07 · From Your Mac to the App Store (AI-assisted build)
 
-A practical, start-to-finish guide to building **The Evangelist** on your Mac — with heavy AI assistance — and getting it published on Apple's App Store. Written for someone who isn't a full-time developer but is comfortable following steps and using an AI coding tool.
+A practical, start-to-finish guide to building **Go and Tell** on your Mac — with heavy AI assistance — and getting it published on Apple's App Store. Written for someone who isn't a full-time developer but is comfortable following steps and using an AI coding tool.
 
 > The short version: install the tools → let an AI coding assistant build the Flutter app from the docs in this repo → test it on your iPhone → enrol in the Apple Developer Program ($99/year) → upload from Xcode → test via TestFlight → submit for review. Plan for **a few weeks of building** and **1–3 days for Apple's review** once you submit.
 
@@ -78,7 +78,7 @@ cd the_evangelist
 ```
 
 **3.2 Point the AI at the docs.** Give it a prompt like:
-> "You're building a Flutter app called The Evangelist. The full spec is in `/docs` — read `00-overview.md`, `01-architecture.md`, `02-data-model.md`, `03-security-rls.md`, `04-backend-logic.md`, and `05-feature-specs.md`. Use Supabase (`supabase_flutter`), Riverpod for state, and the folder structure in `01-architecture.md`. Start by setting up the Supabase client, theme (dark default with a light toggle), and the 5-tab navigation (Dashboard · Community · ➕ Start · Map · Profile). Then build the Dashboard screen exactly as described in `05-feature-specs.md` and the prototype."
+> "You're building a Flutter app called Go and Tell. The full spec is in `/docs` — read `00-overview.md`, `01-architecture.md`, `02-data-model.md`, `03-security-rls.md`, `04-backend-logic.md`, and `05-feature-specs.md`. Use Supabase (`supabase_flutter`), Riverpod for state, and the folder structure in `01-architecture.md`. Start by setting up the Supabase client, theme (dark default with a light toggle), and the 5-tab navigation (Dashboard · Community · ➕ Start · Map · Profile). Then build the Dashboard screen exactly as described in `05-feature-specs.md` and the prototype."
 
 **3.3 Build screen by screen.** Don't ask for the whole app at once. Work in the order the core loop matters: **Auth → Dashboard → ➕ Start sheet → Log/Add Person → Community feed → Live Map → Profile.** After each screen, run the app and check it before moving on.
 
@@ -111,8 +111,8 @@ Use this loop to feel the real app on a device before you spend anything on Appl
 
 Before Apple will accept it, the app needs these. The AI can help with each:
 
-- **App name & bundle ID** — e.g. name "The Evangelist", bundle ID like `com.yourname.theevangelist` (must be unique and permanent).
-- **App icon** — already prepared. Use `/branding/app_icon.png` (1024×1024, no transparency) as the iOS master and run `flutter_launcher_icons` per `/branding/README.md`; it generates every size. The Evangelist bolt becomes your home-screen icon.
+- **App name & bundle ID** — e.g. name "Go and Tell", bundle ID like `com.yourname.theevangelist` (must be unique and permanent).
+- **App icon** — already prepared. Use `/branding/app_icon.png` (1024×1024, no transparency) as the iOS master and run `flutter_launcher_icons` per `/branding/README.md`; it generates every size. Go and Tell bolt becomes your home-screen icon.
 - **Version & build number** — set in `pubspec.yaml` (e.g. `1.0.0+1`).
 - **Permission strings** (in `ios/Runner/Info.plist`) — Apple **rejects** apps that ask for access without a clear reason. You need:
   - Location ("Show you on the live map and find evangelists and churches nearby.")

@@ -1,7 +1,8 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
+import 'package:supabase_flutter/supabase_flutter.dart'
+    show FileOptions, PostgrestException;
 
 import '../core/supabase.dart';
 import '../core/env.dart';
@@ -22,6 +23,7 @@ class _LocalStore {
   static final posts = <Post>[];
   static final comments = <Comment>[];
   static final churches = <Church>[];
+  static final blockedIds = <String>{};
   static OutreachSession? liveSession;
 
   static void reset() {
@@ -37,6 +39,7 @@ class _LocalStore {
     posts.clear();
     comments.clear();
     churches.clear();
+    blockedIds.clear();
     liveSession = null;
   }
 
@@ -367,6 +370,10 @@ class ContactsRepo {
 }
 
 class SessionsRepo {
+  /// A "live" session older than this was abandoned (phone died, app was
+  /// killed, user forgot to end it). Resuming it would show a timer of days.
+  static const staleAfter = Duration(hours: 12);
+
   Future<OutreachSession?> live() async {
     if (!Env.backendEnabled) return _LocalStore.liveSession;
     final row = await supabase
@@ -377,7 +384,21 @@ class SessionsRepo {
         .order('started_at', ascending: false)
         .limit(1)
         .maybeSingle();
-    return row == null ? null : OutreachSession.fromMap(row);
+    if (row == null) return null;
+    final session = OutreachSession.fromMap(row);
+    if (DateTime.now().toUtc().difference(session.startedAt.toUtc()) >
+        staleAfter) {
+      // Close it out quietly so the next start is a fresh 00:00:00.
+      await supabase
+          .from('outreach_sessions')
+          .update({
+            'status': 'cancelled',
+            'ended_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('id', session.id);
+      return null;
+    }
+    return session;
   }
 
   Future<OutreachSession> start({String? locationName}) async {
@@ -439,6 +460,7 @@ class FeedRepo {
       return (type == null
               ? _LocalStore.posts
               : _LocalStore.posts.where((p) => p.type == type))
+          .where((p) => !_LocalStore.blockedIds.contains(p.authorId))
           .toList();
     }
     var q = supabase
@@ -550,8 +572,7 @@ class FeedRepo {
     String ext = 'jpg',
   }) async {
     final uid = currentUserId!;
-    final path =
-        '$uid/${DateTime.now().microsecondsSinceEpoch}.$ext';
+    final path = '$uid/${DateTime.now().microsecondsSinceEpoch}.$ext';
     await supabase.storage
         .from('post-photos')
         .uploadBinary(
@@ -603,7 +624,11 @@ class CommentsRepo {
   Future<List<Comment>> list(String postId) async {
     if (!Env.backendEnabled) {
       return _LocalStore.comments
-          .where((c) => c.postId == postId)
+          .where(
+            (c) =>
+                c.postId == postId &&
+                !_LocalStore.blockedIds.contains(c.authorId),
+          )
           .toList(growable: false);
     }
     final rows = await supabase
@@ -641,6 +666,80 @@ class CommentsRepo {
         )
         .single();
     return Comment.fromMap(row);
+  }
+}
+
+/// Content reporting + user blocking (App Store Guideline 1.2).
+class ModerationRepo {
+  /// Files a report against a post or a comment. Re-reporting the same item
+  /// overwrites the previous row rather than erroring on the unique index.
+  Future<void> report({
+    String? postId,
+    String? commentId,
+    required String reason,
+    String? details,
+  }) async {
+    assert((postId == null) != (commentId == null), 'report exactly one item');
+    if (!Env.backendEnabled) return;
+    await supabase.from('content_reports').upsert(
+      {
+        'reporter_id': currentUserId,
+        'post_id': ?postId,
+        'comment_id': ?commentId,
+        'reason': reason,
+        'details': ?details,
+      },
+      onConflict: postId != null
+          ? 'reporter_id,post_id'
+          : 'reporter_id,comment_id',
+    );
+  }
+
+  Future<void> block(String userId) async {
+    if (!Env.backendEnabled) {
+      _LocalStore.blockedIds.add(userId);
+      return;
+    }
+    await supabase.from('user_blocks').upsert({
+      'blocker_id': currentUserId,
+      'blocked_id': userId,
+    });
+  }
+
+  Future<void> unblock(String userId) async {
+    if (!Env.backendEnabled) {
+      _LocalStore.blockedIds.remove(userId);
+      return;
+    }
+    await supabase
+        .from('user_blocks')
+        .delete()
+        .eq('blocker_id', currentUserId!)
+        .eq('blocked_id', userId);
+  }
+
+  /// Ids the current user has blocked, with the display name for the
+  /// "Blocked accounts" management screen.
+  Future<List<Profile>> blockedProfiles() async {
+    if (!Env.backendEnabled) {
+      return _LocalStore.blockedIds
+          .map((id) => Profile(id: id, fullName: 'Blocked user'))
+          .toList();
+    }
+    final rows = await supabase
+        .from('user_blocks')
+        .select(
+          'blocked_id,'
+          'profiles!user_blocks_blocked_id_fkey('
+          'id,full_name,city,church,ministry,avatar_url)',
+        )
+        .eq('blocker_id', currentUserId!);
+    return rows
+        .where((r) => r['profiles'] != null)
+        .map<Profile>(
+          (r) => Profile.fromMap(Map<String, dynamic>.from(r['profiles'])),
+        )
+        .toList();
   }
 }
 
@@ -726,7 +825,11 @@ class MapRepo {
 
 class ChurchesRepo {
   /// Churches near a point (public directory). Returns verified + pending.
-  Future<List<Church>> nearby(double lat, double lng, {int radius = 8000}) async {
+  Future<List<Church>> nearby(
+    double lat,
+    double lng, {
+    int radius = 8000,
+  }) async {
     if (!Env.backendEnabled) {
       return _LocalStore.churches;
     }
@@ -755,6 +858,10 @@ class ChurchesRepo {
     String? claimantRole,
     String? claimantPhone,
     String? claimantEmail,
+    String? pastorName,
+    String? pastorPhone,
+    String? pastorEmail,
+    String? bestTimeToMeet,
   }) async {
     if (!Env.backendEnabled) {
       final church = Church(
@@ -772,7 +879,7 @@ class ChurchesRepo {
       _LocalStore.churches.insert(0, church);
       return church.id;
     }
-    final id = await supabase.rpc(
+    final id = await _churchRpc(
       'register_church',
       params: {
         'p_name': name,
@@ -787,6 +894,10 @@ class ChurchesRepo {
         'p_claimant_role': claimantRole,
         'p_claimant_phone': claimantPhone,
         'p_claimant_email': claimantEmail,
+        'p_pastor_name': pastorName,
+        'p_pastor_phone': pastorPhone,
+        'p_pastor_email': pastorEmail,
+        'p_best_time_to_meet': bestTimeToMeet,
       },
     );
     return id.toString();
@@ -801,9 +912,13 @@ class ChurchesRepo {
     String? claimantPhone,
     String? claimantEmail,
     String? message,
+    String? pastorName,
+    String? pastorPhone,
+    String? pastorEmail,
+    String? bestTimeToMeet,
   }) async {
     if (!Env.backendEnabled) return;
-    await supabase.rpc(
+    await _churchRpc(
       'claim_church',
       params: {
         'p_church_id': churchId,
@@ -812,8 +927,33 @@ class ChurchesRepo {
         'p_claimant_phone': claimantPhone,
         'p_claimant_email': claimantEmail,
         'p_message': message,
+        'p_pastor_name': pastorName,
+        'p_pastor_phone': pastorPhone,
+        'p_pastor_email': pastorEmail,
+        'p_best_time_to_meet': bestTimeToMeet,
       },
     );
+  }
+
+  /// Calls a church RPC, turning PostgREST's "no such function" error (the
+  /// database is still on the pre-pastor signature) into a message that says
+  /// which migration to run instead of an opaque schema-cache error.
+  Future<dynamic> _churchRpc(
+    String fn, {
+    required Map<String, dynamic> params,
+  }) async {
+    try {
+      return await supabase.rpc(fn, params: params);
+    } on PostgrestException catch (e) {
+      if (e.code == 'PGRST202' ||
+          e.message.contains('Could not find the function')) {
+        throw StateError(
+          'The database needs the church update. Run '
+          'supabase/migrate_church_pastor.sql in the Supabase SQL editor.',
+        );
+      }
+      rethrow;
+    }
   }
 
   // ---- Church membership (members ↔ churches) ------------------------------
@@ -857,13 +997,19 @@ class ChurchesRepo {
   /// Church manager confirms a pending member.
   Future<void> confirmMember(String membershipId) async {
     if (!Env.backendEnabled) return;
-    await supabase.rpc('confirm_member', params: {'p_membership_id': membershipId});
+    await supabase.rpc(
+      'confirm_member',
+      params: {'p_membership_id': membershipId},
+    );
   }
 
   /// Church manager removes a member.
   Future<void> removeMember(String membershipId) async {
     if (!Env.backendEnabled) return;
-    await supabase.rpc('remove_member', params: {'p_membership_id': membershipId});
+    await supabase.rpc(
+      'remove_member',
+      params: {'p_membership_id': membershipId},
+    );
   }
 
   /// Contacts members have opted to share with a church the current user
