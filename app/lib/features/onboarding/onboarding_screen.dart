@@ -152,7 +152,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                             _Welcome(active: _index == 0),
                             _Verse(
                               active: _index == 1,
-                              reference: 'MATTHEW 9:37–38',
+                              reference: 'MATTHEW 9:37–38 · ESV',
                               lines: const [
                                 'Then he said to his disciples,',
                                 '“The harvest is plentiful,',
@@ -166,7 +166,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                             ),
                             _Verse(
                               active: _index == 2,
-                              reference: 'MARK 16:15–16',
+                              reference: 'MARK 16:15–16 · NKJV',
                               lines: const [
                                 'And He said to them,',
                                 '“Go into all the world and preach the gospel '
@@ -184,7 +184,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                             ),
                             _Verse(
                               active: _index == 3,
-                              reference: 'MATTHEW 6:20–21',
+                              reference: 'MATTHEW 6:20–21 · ESV',
                               lines: const [
                                 '“But lay up for yourselves treasures in heaven, '
                                     'where neither moth nor rust destroys and '

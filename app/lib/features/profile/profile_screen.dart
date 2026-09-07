@@ -416,6 +416,14 @@ class _SettingsCardState extends ConsumerState<_SettingsCard> {
                 );
               },
             ),
+            const Divider(height: 8),
+            ListTile(
+              leading: const Icon(Icons.info_outline),
+              title: const Text('About & credits'),
+              subtitle: const Text('Version, Scripture and map credits'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _showAbout(context),
+            ),
             // Blocking management (App Store Guideline 1.2): blocks must be
             // reviewable and reversible, not one-way.
             const Divider(height: 8),
@@ -455,6 +463,37 @@ class _SettingsCardState extends ConsumerState<_SettingsCard> {
             ],
           ],
         ),
+      ),
+    );
+  }
+
+  /// Required notices for the third-party material the app quotes or draws.
+  void _showAbout(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Go and Tell'),
+        content: const SingleChildScrollView(
+          child: Text(
+            'Version 1.0.0\n\n'
+            'Scripture quotations marked ESV are from the ESV® Bible '
+            '(The Holy Bible, English Standard Version®), © 2001 by Crossway, '
+            'a publishing ministry of Good News Publishers. Used by permission. '
+            'All rights reserved.\n\n'
+            'Scripture quotations marked NKJV are taken from the New King James '
+            'Version®. © 1982 by Thomas Nelson. Used by permission. '
+            'All rights reserved.\n\n'
+            'Map data © Esri, HERE, Garmin, © OpenStreetMap contributors. '
+            'Address lookup by Apple Maps and OpenStreetMap Nominatim.',
+            style: TextStyle(fontSize: 13, height: 1.4),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+        ],
       ),
     );
   }
