@@ -681,18 +681,33 @@ class ModerationRepo {
   }) async {
     assert((postId == null) != (commentId == null), 'report exactly one item');
     if (!Env.backendEnabled) return;
-    await supabase.from('content_reports').upsert(
-      {
-        'reporter_id': currentUserId,
-        'post_id': ?postId,
-        'comment_id': ?commentId,
-        'reason': reason,
-        'details': ?details,
-      },
-      onConflict: postId != null
-          ? 'reporter_id,post_id'
-          : 'reporter_id,comment_id',
-    );
+    // The uniqueness rule is a PARTIAL index (it carries a `where` clause), and
+    // Postgres refuses a partial index as an ON CONFLICT target — that raised
+    // 42P10 and broke reporting. Update the existing row if there is one, and
+    // insert otherwise; the pair is safe because the index still blocks any
+    // duplicate that slips through a race.
+    final column = postId != null ? 'post_id' : 'comment_id';
+    final targetId = postId ?? commentId;
+    final existing = await supabase
+        .from('content_reports')
+        .select('id')
+        .eq('reporter_id', currentUserId!)
+        .eq(column, targetId!)
+        .maybeSingle();
+    if (existing != null) {
+      await supabase
+          .from('content_reports')
+          .update({'reason': reason, 'details': ?details, 'status': 'pending'})
+          .eq('id', existing['id']);
+      return;
+    }
+    await supabase.from('content_reports').insert({
+      'reporter_id': currentUserId,
+      'post_id': ?postId,
+      'comment_id': ?commentId,
+      'reason': reason,
+      'details': ?details,
+    });
   }
 
   Future<void> block(String userId) async {
@@ -700,10 +715,13 @@ class ModerationRepo {
       _LocalStore.blockedIds.add(userId);
       return;
     }
-    await supabase.from('user_blocks').upsert({
-      'blocker_id': currentUserId,
-      'blocked_id': userId,
-    });
+    await supabase
+        .from('user_blocks')
+        .upsert(
+          {'blocker_id': currentUserId, 'blocked_id': userId},
+          onConflict: 'blocker_id,blocked_id',
+          ignoreDuplicates: true,
+        );
   }
 
   Future<void> unblock(String userId) async {
