@@ -11,7 +11,7 @@ export default function DashboardLayout({
     <div className="layout">
       <aside className="sidebar">
         <div className="brand">
-          The Evangelist<span className="dot">.</span>
+          Go and Tell<span className="dot">.</span>
         </div>
         <Nav />
         <form action="/api/logout" method="post">

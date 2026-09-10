@@ -38,7 +38,7 @@ function LoginForm() {
   return (
     <form className="login-card" onSubmit={submit}>
       <h1>
-        The Evangelist<span style={{ color: "var(--accent)" }}>.</span>
+        Go and Tell<span style={{ color: "var(--accent)" }}>.</span>
       </h1>
       <p className="muted" style={{ margin: 0 }}>
         Admin access
