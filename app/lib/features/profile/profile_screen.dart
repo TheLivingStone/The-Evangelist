@@ -109,35 +109,47 @@ class ProfileScreen extends ConsumerWidget {
                               ),
                             ),
                             const SizedBox(height: 12),
-                            GridView.count(
-                              crossAxisCount: 2,
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              childAspectRatio: 2.4,
-                              mainAxisSpacing: 10,
-                              crossAxisSpacing: 10,
-                              children: [
-                                _stat(
-                                  'Conversations',
-                                  p.totalConversations,
-                                  AppColors.green,
-                                ),
-                                _stat(
-                                  'Salvations',
-                                  p.totalSalvations,
-                                  AppColors.accent,
-                                ),
-                                _stat(
-                                  'Follow-Ups',
-                                  p.totalFollowups,
-                                  AppColors.blue,
-                                ),
-                                _stat(
-                                  'Church Connections',
-                                  p.totalChurchConnections,
-                                  AppColors.purple,
-                                ),
-                              ],
+                            // A fixed aspect ratio stretched these tiles tall
+                            // on large phones, leaving a big empty gap. Size
+                            // them from the available width instead so the
+                            // rows stay the same height on every device.
+                            LayoutBuilder(
+                              builder: (context, c) {
+                                final tile = (c.maxWidth - 10) / 2;
+                                return GridView.count(
+                                  crossAxisCount: 2,
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  mainAxisExtent: (tile / 2.4).clamp(
+                                    64.0,
+                                    84.0,
+                                  ),
+                                  mainAxisSpacing: 10,
+                                  crossAxisSpacing: 10,
+                                  children: [
+                                    _stat(
+                                      'Conversations',
+                                      p.totalConversations,
+                                      AppColors.green,
+                                    ),
+                                    _stat(
+                                      'Salvations',
+                                      p.totalSalvations,
+                                      AppColors.accent,
+                                    ),
+                                    _stat(
+                                      'Follow-Ups',
+                                      p.totalFollowups,
+                                      AppColors.blue,
+                                    ),
+                                    _stat(
+                                      'Church Connections',
+                                      p.totalChurchConnections,
+                                      AppColors.purple,
+                                    ),
+                                  ],
+                                );
+                              },
                             ),
                             const SizedBox(height: 8),
                             Row(
