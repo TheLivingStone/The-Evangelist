@@ -41,7 +41,7 @@ Future<bool> requireAccount(BuildContext context, WidgetRef ref) async {
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => const _UpgradeAccountSheet(),
+    builder: (_) => const UpgradeAccountSheet(),
   );
   return upgraded ?? false;
 }
@@ -49,14 +49,14 @@ Future<bool> requireAccount(BuildContext context, WidgetRef ref) async {
 /// Bottom sheet that turns the current anonymous guest into a real account by
 /// attaching an email + password (and name) to the SAME user, so everything
 /// they did as a guest is kept.
-class _UpgradeAccountSheet extends ConsumerStatefulWidget {
-  const _UpgradeAccountSheet();
+class UpgradeAccountSheet extends ConsumerStatefulWidget {
+  const UpgradeAccountSheet({super.key});
   @override
-  ConsumerState<_UpgradeAccountSheet> createState() =>
+  ConsumerState<UpgradeAccountSheet> createState() =>
       _UpgradeAccountSheetState();
 }
 
-class _UpgradeAccountSheetState extends ConsumerState<_UpgradeAccountSheet> {
+class _UpgradeAccountSheetState extends ConsumerState<UpgradeAccountSheet> {
   final _name = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
@@ -227,23 +227,20 @@ class _UpgradeAccountSheetState extends ConsumerState<_UpgradeAccountSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    // Space actually left for the sheet: the screen minus the keyboard, the
+    // status bar, and a little breathing room at the top.
+    final available =
+        media.size.height - media.viewInsets.bottom - media.padding.top - 24;
     return Padding(
       // Lift above the keyboard.
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: GlassSheet(
-        // The sheet must scroll: with the keyboard up the fixed column
-        // overflowed its box. Cap the height at the space actually left above
-        // the keyboard so the scroll view has a bounded box to scroll in.
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight:
-                MediaQuery.sizeOf(context).height -
-                MediaQuery.viewInsetsOf(context).bottom -
-                MediaQuery.paddingOf(context).top -
-                48,
-          ),
+      padding: EdgeInsets.only(bottom: media.viewInsets.bottom),
+      // Cap the WHOLE sheet: GlassSheet adds its own Column (drag handle +
+      // child), and that outer Column is what overflowed. The inner scroll
+      // view then has a bounded box to scroll inside.
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: available.clamp(220.0, 900.0)),
+        child: GlassSheet(
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
