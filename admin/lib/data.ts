@@ -71,6 +71,8 @@ export type Overview = {
   verifiedChurches: number;
   newUsers7d: number;
   newPosts7d: number;
+  /** Anonymous guest sessions (fresh installs that never made an account). */
+  guestSessions: number;
 };
 
 function sevenDaysAgoIso(): string {
@@ -87,6 +89,31 @@ async function count(
   const { count: c, error } = await q;
   if (error) throw new Error(`count(${table}): ${error.message}`);
   return c ?? 0;
+}
+
+// Guests are anonymous sessions created on every fresh install; they are not
+// users. `profiles.is_guest` comes from migrate_guest_flag.sql — until that has
+// run the column is missing, so fall back to the unfiltered number rather than
+// breaking the page.
+async function countRealUsers(build?: (q: any) => any): Promise<number> {
+  try {
+    return await count("profiles", (q) => {
+      const base = q.eq("is_guest", false);
+      return build ? build(base) : base;
+    });
+  } catch (e) {
+    if (String(e).includes("is_guest")) return count("profiles", build);
+    throw e;
+  }
+}
+
+async function countGuests(): Promise<number> {
+  try {
+    return await count("profiles", (q) => q.eq("is_guest", true));
+  } catch (e) {
+    if (String(e).includes("is_guest")) return 0;
+    throw e;
+  }
 }
 
 async function sumColumn(table: string, column: string): Promise<number> {
@@ -110,15 +137,17 @@ export async function getOverview(): Promise<Overview> {
     newPosts7d,
     totalSalvations,
     totalConversations,
+    guestSessions,
   ] = await Promise.all([
-    count("profiles"),
+    countRealUsers(),
     count("posts"),
     count("churches"),
     count("churches", (q) => q.eq("is_verified", true)),
-    count("profiles", (q) => q.gte("created_at", since)),
+    countRealUsers((q) => q.gte("created_at", since)),
     count("posts", (q) => q.gte("created_at", since)),
     sumColumn("profiles", "total_salvations"),
     sumColumn("profiles", "total_conversations"),
+    countGuests(),
   ]);
 
   return {
@@ -130,18 +159,21 @@ export async function getOverview(): Promise<Overview> {
     verifiedChurches,
     newUsers7d,
     newPosts7d,
+    guestSessions,
   };
 }
 
 export async function getUsers(limit = 200): Promise<ProfileRow[]> {
-  const { data, error } = await supabaseAdmin()
-    .from("profiles")
-    .select(
-      "id,full_name,username,city,church,ministry,current_streak,longest_streak," +
-        "total_conversations,total_salvations,total_followups,total_church_connections,created_at",
-    )
-    .order("created_at", { ascending: false })
-    .limit(limit);
+  const columns =
+    "id,full_name,username,city,church,ministry,current_streak,longest_streak," +
+    "total_conversations,total_salvations,total_followups,total_church_connections,created_at";
+  const query = (guestFilter: boolean) => {
+    let q = supabaseAdmin().from("profiles").select(columns);
+    if (guestFilter) q = q.eq("is_guest", false);
+    return q.order("created_at", { ascending: false }).limit(limit);
+  };
+  let { data, error } = await query(true);
+  if (error && error.message.includes("is_guest")) ({ data, error } = await query(false));
   if (error) throw new Error(`getUsers: ${error.message}`);
   return (data ?? []) as unknown as ProfileRow[];
 }
@@ -175,6 +207,7 @@ export async function getRecentPulse(limit = 12): Promise<PulseItem[]> {
     sb
       .from("profiles")
       .select("full_name,city,created_at")
+      .eq("is_guest", false)
       .order("created_at", { ascending: false })
       .limit(limit),
     sb

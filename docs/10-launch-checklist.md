@@ -50,7 +50,7 @@ tries a real-account action.
    reset → schema → policies). Then run, in any order:
    `migrate_church_members.sql`, `migrate_church_registration.sql`,
    `migrate_church_pastor.sql`, `migrate_feed_comments_photos.sql`,
-   `migrate_admin_analytics.sql`.
+   `migrate_admin_analytics.sql`, `migrate_guest_flag.sql`.
 4. **Authentication → Providers**:
    - Enable **Anonymous sign-ins** (the app's guest mode depends on this).
    - Enable **Apple**. Fill in the values from step D below.
