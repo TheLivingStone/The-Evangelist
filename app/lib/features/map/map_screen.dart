@@ -105,7 +105,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       } catch (_) {
         // Map not built yet (still loading); it opens at _center anyway.
       }
-      setState(() => _future = _load());
+      // _load() is async: build the future FIRST, then assign it inside a
+      // synchronous setState. Passing an async closure to setState throws.
+      final next = _load();
+      setState(() => _future = next);
     } catch (error) {
       if (!mounted || silent) return;
       ScaffoldMessenger.of(context).showSnackBar(

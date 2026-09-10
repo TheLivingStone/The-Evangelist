@@ -104,9 +104,50 @@ class _UpgradeAccountSheetState extends ConsumerState<_UpgradeAccountSheet> {
       ref.invalidate(myProfileProvider);
       if (mounted) Navigator.of(context).pop(true);
     } on AuthException catch (e) {
+      // The email already has an account. That is almost always a returning
+      // user (or a reviewer with supplied credentials) typing their details
+      // into the only form on screen, so sign them in instead of dead-ending.
+      if (_looksAlreadyRegistered(e)) {
+        await _signInExisting(email);
+        return;
+      }
       setState(() => _error = e.message);
     } catch (e) {
       setState(() => _error = 'Could not save your account. Please try again.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  bool _looksAlreadyRegistered(AuthException e) {
+    final m = e.message.toLowerCase();
+    return m.contains('already been registered') ||
+        m.contains('already registered') ||
+        m.contains('already exists') ||
+        e.statusCode == '422';
+  }
+
+  /// Signs in to the existing account with the typed credentials. Any guest
+  /// data created in this session stays on the guest user; the person lands in
+  /// the account they actually own.
+  Future<void> _signInExisting(String email) async {
+    try {
+      await supabase.auth.signInWithPassword(
+        email: email,
+        password: _password.text,
+      );
+      ref.invalidate(myProfileProvider);
+      if (mounted) Navigator.of(context).pop(true);
+    } on AuthException catch (e) {
+      final m = e.message.toLowerCase();
+      setState(
+        () => _error = m.contains('invalid login')
+            ? 'That email already has an account, but the password does not '
+                  'match. Check the password or use "Forgot password".'
+            : e.message,
+      );
+    } catch (_) {
+      setState(() => _error = 'Could not sign in. Please try again.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -192,148 +233,155 @@ class _UpgradeAccountSheetState extends ConsumerState<_UpgradeAccountSheet> {
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
       child: GlassSheet(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Accent badge — keeps the Bold Refined identity.
-            Center(
-              child: Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: AppColors.accent,
-                  borderRadius: BorderRadius.circular(Dims.rMd),
-                ),
-                child: const Icon(
-                  Icons.bookmark_added_rounded,
-                  color: Colors.white,
-                  size: 26,
-                ),
-              ),
-            ),
-            const SizedBox(height: Dims.l),
-            const Text(
-              'Create your account',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Save your progress so nothing is lost. Everything you\'ve done '
-              'so far stays with you.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: Dims.muted(context)),
-            ),
-            const SizedBox(height: Dims.xl),
-            _field(
-              _name,
-              'Full name',
-              Icons.person_outline_rounded,
-              cap: TextCapitalization.words,
-            ),
-            const SizedBox(height: Dims.m),
-            _field(
-              _email,
-              'Email',
-              Icons.mail_outline_rounded,
-              keyboard: TextInputType.emailAddress,
-              autocorrect: false,
-            ),
-            const SizedBox(height: Dims.m),
-            _field(
-              _password,
-              'Password',
-              Icons.lock_outline_rounded,
-              obscure: true,
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: Dims.m),
-              Text(
-                _error!,
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  color: Color(0xFFE5484D),
-                ),
-              ),
-            ],
-            const SizedBox(height: Dims.xl),
-            SizedBox(
-              height: 52,
-              child: ElevatedButton(
-                onPressed: _busy ? null : _save,
-                child: _busy
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Text('Save & continue'),
-              ),
-            ),
-            // Apple is the fastest upgrade path on iOS — offer it alongside
-            // email. Linking keeps the same user id, so guest data is retained.
-            if (_appleAvailable) ...[
-              const SizedBox(height: Dims.m),
-              Row(
-                children: [
-                  Expanded(
-                    child: Divider(color: Dims.border(context), height: 1),
+        // The sheet must scroll: with the keyboard up on a shorter phone the
+        // fixed column overflowed its box.
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Accent badge — keeps the Bold Refined identity.
+              Center(
+                child: Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: AppColors.accent,
+                    borderRadius: BorderRadius.circular(Dims.rMd),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: Dims.m),
-                    child: Text(
-                      'or',
+                  child: const Icon(
+                    Icons.bookmark_added_rounded,
+                    color: Colors.white,
+                    size: 26,
+                  ),
+                ),
+              ),
+              const SizedBox(height: Dims.l),
+              const Text(
+                'Create your account',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Save your progress so nothing is lost. Everything you\'ve done '
+                'so far stays with you.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: Dims.muted(context)),
+              ),
+              const SizedBox(height: Dims.xl),
+              _field(
+                _name,
+                'Full name',
+                Icons.person_outline_rounded,
+                cap: TextCapitalization.words,
+              ),
+              const SizedBox(height: Dims.m),
+              _field(
+                _email,
+                'Email',
+                Icons.mail_outline_rounded,
+                keyboard: TextInputType.emailAddress,
+                autocorrect: false,
+              ),
+              const SizedBox(height: Dims.m),
+              _field(
+                _password,
+                'Password',
+                Icons.lock_outline_rounded,
+                obscure: true,
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: Dims.m),
+                Text(
+                  _error!,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    color: Color(0xFFE5484D),
+                  ),
+                ),
+              ],
+              const SizedBox(height: Dims.xl),
+              SizedBox(
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: _busy ? null : _save,
+                  child: _busy
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text('Save & continue'),
+                ),
+              ),
+              // Apple is the fastest upgrade path on iOS — offer it alongside
+              // email. Linking keeps the same user id, so guest data is retained.
+              if (_appleAvailable) ...[
+                const SizedBox(height: Dims.m),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Divider(color: Dims.border(context), height: 1),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: Dims.m),
+                      child: Text(
+                        'or',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: Dims.muted(context),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Divider(color: Dims.border(context), height: 1),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: Dims.m),
+                SizedBox(
+                  height: 52,
+                  child: OutlinedButton.icon(
+                    onPressed: _busy ? null : _apple,
+                    icon: const Icon(Icons.apple, size: 22),
+                    label: const Text(
+                      'Continue with Apple',
                       style: TextStyle(
-                        fontSize: 12.5,
-                        color: Dims.muted(context),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Theme.of(context).colorScheme.onSurface,
+                      side: BorderSide(
+                        color: Dims.border(context),
+                        width: Dims.hairline,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(Dims.rSm),
                       ),
                     ),
                   ),
-                  Expanded(
-                    child: Divider(color: Dims.border(context), height: 1),
-                  ),
-                ],
-              ),
-              const SizedBox(height: Dims.m),
-              SizedBox(
-                height: 52,
-                child: OutlinedButton.icon(
-                  onPressed: _busy ? null : _apple,
-                  icon: const Icon(Icons.apple, size: 22),
-                  label: const Text(
-                    'Continue with Apple',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Theme.of(context).colorScheme.onSurface,
-                    side: BorderSide(
-                      color: Dims.border(context),
-                      width: Dims.hairline,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(Dims.rSm),
-                    ),
+                ),
+              ],
+              const SizedBox(height: Dims.s),
+              Center(
+                child: TextButton(
+                  onPressed: _busy
+                      ? null
+                      : () => Navigator.of(context).pop(false),
+                  child: Text(
+                    'Not now',
+                    style: TextStyle(color: Dims.muted(context)),
                   ),
                 ),
               ),
             ],
-            const SizedBox(height: Dims.s),
-            Center(
-              child: TextButton(
-                onPressed: _busy
-                    ? null
-                    : () => Navigator.of(context).pop(false),
-                child: Text(
-                  'Not now',
-                  style: TextStyle(color: Dims.muted(context)),
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
